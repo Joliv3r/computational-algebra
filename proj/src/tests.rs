@@ -85,7 +85,7 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
         //     p.next_prime_mut();
         // }
         // last_bit_number = p.significant_bits();
-        for _ in 0..400 {
+        for _ in 0..5 {
             p.next_prime_mut();
         }
 
@@ -102,17 +102,26 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
         }
     }
 
-    let root = SVGBackend::new("plots/naive-square.svg", (600, 400)).into_drawing_area();
+    for i in &square_vec {
+        println!("{}", i.1);
+    }
+
+    let root = SVGBackend::new("../latex/proj1/images/naive-square.svg", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Runtime in nanoseconds", ("sans-serif", 25).into_font())
+        .caption("Runtime of Naive vs Square-Multiply", ("computer-modern", 30).into_font())
         .margin(40)
         .x_label_area_size(30)
-        .y_label_area_size(30)
+        .y_label_area_size(50)
         .build_cartesian_2d(0..p.to_u128().unwrap_or(u128::MAX), 0..max_time_naive)?;
 
-    chart.configure_mesh().draw()?;
+    chart.configure_mesh()
+        .x_desc("Prime number")
+        .x_label_style(("computer-modern", 12).into_font())
+        .y_desc("Nanoseconds")
+        .y_label_style(("computer-modern", 12).into_font())
+        .draw()?;
 
     chart
         .draw_series(PointSeries::of_element(
@@ -126,7 +135,7 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
                 // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
             },
         ))?
-        .label("Naive approach")
+        .label("Naive")
         .legend(|(x, y)| Circle::new((x, y), 3, RED.filled()));
         // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
 
@@ -142,17 +151,20 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
                 // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
             },
         ))?
-        .label("Square approach")
+        .label("Square-Multiply")
         // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
         .legend(|(x, y)| Circle::new((x, y), 3, BLUE.filled()));
 
     chart
         .configure_series_labels()
+        .label_font(("computer-modern", 12).into_font())
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)
+        .legend_area_size(12)
         .draw()?;
 
     root.present()?;
+
 
     Ok(())
 }
@@ -179,24 +191,29 @@ pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::E
         let a = p.clone() - Integer::ONE.clone();
         let b = p.clone();
         let elapsed_naive = check_timing_naive(&a, &b, &p, m);
-        naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_nanos()));
-        if elapsed_naive.as_nanos() > max_time_naive {
-            max_time_naive = elapsed_naive.as_nanos();
+        naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_micros()));
+        if elapsed_naive.as_micros() > max_time_naive {
+            max_time_naive = elapsed_naive.as_micros();
         }
         // println!("{}, {}, {}", &p, elapsed_square.as_nanos(), elapsed_naive.as_nanos());
     }
 
-    let root = SVGBackend::new("plots/naive.svg", (640, 480)).into_drawing_area();
+    let root = SVGBackend::new("../latex/proj1/images/naive.svg", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Runtime in nanoseconds", ("sans-serif", 50).into_font())
+        .caption("Runtime of Naive Exponentiation", ("computer-modern", 30).into_font())
         .margin(40)
         .x_label_area_size(30)
-        .y_label_area_size(30)
+        .y_label_area_size(50)
         .build_cartesian_2d(0..p.to_u128().unwrap_or(u128::MAX), 0..max_time_naive)?;
 
-    chart.configure_mesh().draw()?;
+    chart.configure_mesh()
+        .x_desc("Prime number")
+        .x_label_style(("computer-modern", 12).into_font())
+        .y_desc("Microseconds")
+        .y_label_style(("computer-modern", 12).into_font())
+        .draw()?;
 
     chart
         .draw_series(PointSeries::of_element(
@@ -209,16 +226,16 @@ pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::E
                 + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
                 // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
             },
-        ))?
-        .label("Naive approach")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+        ))?;
+        // .label("Naive approach")
+        // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
         // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
 
-    chart
-        .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+    // chart
+    //     .configure_series_labels()
+    //     .background_style(&WHITE.mix(0.8))
+    //     .border_style(&BLACK)
+    //     .draw()?;
 
     root.present()?;
     
@@ -256,17 +273,23 @@ pub fn plot_timing_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::
     }
 
 
-    let root = SVGBackend::new("plots/square.svg", (640, 480)).into_drawing_area();
+    let root = SVGBackend::new("../latex/proj1/images/square.svg", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Runtime in nanoseconds", ("sans-serif", 50).into_font())
-        .margin(40)
+        .caption("Runtime of Square-Multiply", ("computer-modern", 30).into_font())
+        .margin(30)
         .x_label_area_size(30)
-        .y_label_area_size(30)
+        .y_label_area_size(50)
         .build_cartesian_2d((0..p.to_u64().unwrap_or(u64::MAX)).log_scale(), 0..max_time_square as u64)?;
 
-    chart.configure_mesh().draw()?;
+    chart.configure_mesh()
+        .x_desc("Prime number")
+        .x_label_formatter(&|x| format!("10^{}", x.ilog10()))
+        .x_label_style(("computer-modern", 12).into_font())
+        .y_desc("Nanoseconds")
+        .y_label_style(("computer-modern", 12).into_font())
+        .draw()?;
 
     chart
         .draw_series(PointSeries::of_element(
@@ -279,15 +302,15 @@ pub fn plot_timing_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::
                 + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
                 // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
             },
-        ))?
-        .label("Square approach")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        ))?;
+        // .label("Square approach")
+        // .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
-    chart
-        .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+    // chart
+    //     .configure_series_labels()
+    //     .background_style(&WHITE.mix(0.8))
+    //     .border_style(&BLACK)
+    //     .draw()?;
 
     root.present()?;
 
