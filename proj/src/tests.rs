@@ -89,10 +89,9 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
             p.next_prime_mut();
         }
 
-        // let a = randint_digits(p.significant_digits::<usize>());
-        let a = p.clone() - Integer::ONE.clone();
+        let a = randint_digits(p.to_string().len());
+        // let a = p.clone() - Integer::ONE.clone();
         // let b = randint_digits(p.significant_digits::<usize>());
-        // let a = p.clone();
         let b = p.clone();
         let (elapsed_naive, elapsed_square) = check_timing_against_naive(&a, &b, &p, m);
         naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_nanos()));
@@ -102,9 +101,9 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
         }
     }
 
-    for i in &square_vec {
-        println!("{}", i.1);
-    }
+    // for i in &square_vec {
+    //     println!("{}", i.1);
+    // }
 
     let root = SVGBackend::new("../latex/proj1/images/naive-square.svg", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
@@ -186,10 +185,11 @@ pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::E
         }
         // p = randint_digits(i as usize).next_prime();
 
-        // let a = randint_digits(p.significant_digits::<usize>());
-        // let b = randint_digits(p.significant_digits::<usize>());
-        let a = p.clone() - Integer::ONE.clone();
+        let a = randint_digits(p.to_string().len());
+        // let a = p.clone() - Integer::ONE.clone();
+        // let b = randint_digits(p.to_string().len());
         let b = p.clone();
+        println!("{}", b);
         let elapsed_naive = check_timing_naive(&a, &b, &p, m);
         naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_micros()));
         if elapsed_naive.as_micros() > max_time_naive {
@@ -260,9 +260,9 @@ pub fn plot_timing_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::
         // }
         p = randint_bits(i as usize).next_prime();
 
-        // let a = randint_digits(p.significant_digits::<usize>());
+        let a = randint_digits(p.to_string().len());
         // let b = randint_digits(p.significant_digits::<usize>());
-        let a = p.clone() - Integer::ONE.clone();
+        // let a = p.clone() - Integer::ONE.clone();
         let b = p.clone();
         let elapsed_square = check_timing_square(&a, &b, &p, m);
         square_vec.push((p.to_u64().unwrap(), elapsed_square.as_nanos() as u64));
