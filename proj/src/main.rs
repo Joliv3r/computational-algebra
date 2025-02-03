@@ -1,16 +1,30 @@
 // This is in addition to computational algebra a personal learning experience with rust.
 
+use std::env;
+
+use rand::{thread_rng, Rng};
+
 pub mod algebraic_structure;
 pub mod tests;
 pub mod integer_computations;
+pub mod prime;
+pub mod random;
 
+
+fn options_handler(args: Vec<String>) {
+    for arg in &args[1..] {
+        if arg == "generate-test-lists" {
+            prime::generate_primes();
+            prime::generate_non_primes();
+        } else if arg == "generate-small-primes" {
+            prime::generate_small_primes();
+        } else {
+            println!("Argument {} is not valid.", arg);
+        }
+
+    }
+}
 
 fn main() {
-    let loops = 10;
-    let naive_square_points: usize = 20;
-    let naive_points: usize = 50;
-    let square_points: usize = 50;
-    tests::plot_timing_naive_square(naive_square_points, loops).expect("Should not fail");
-    tests::plot_timing_naive(naive_points, loops).expect("Should not fail");
-    tests::plot_timing_square(square_points, loops).expect("Should not fail");
+    options_handler(env::args().collect());
 }

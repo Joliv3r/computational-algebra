@@ -4,30 +4,7 @@ use crate::{algebraic_structure::{finite_field::FiniteField, Element}, integer_c
 use rug::Integer;
 use plotters::prelude::*;
 use plotters::coord::combinators::IntoLogRange;
-use rand::{thread_rng, Rng};
-
-
-pub fn randint_bits(bits: usize) -> Integer {
-    let mut n = Integer::from(1);
-    let mut rng = thread_rng();
-    for _ in 1..bits {
-        n <<= 1;
-        n += rng.gen_range(0..=1);
-    }
-    n
-}
-
-
-pub fn randint_digits(digits: usize) -> Integer {
-    let mut rng = thread_rng();
-    let mut n: Integer = Integer::from(rng.gen_range(1..=9));
-
-    for _ in 0..digits {
-        n *= 10;
-        n += rng.gen_range(0..=9);
-    }
-    n
-}
+use crate::random::{randint_bits, randint_digits};
 
 
 pub fn check_timing_against_rug(a: &Integer, b: &Integer, p: &Integer) -> (Duration, Duration) {
