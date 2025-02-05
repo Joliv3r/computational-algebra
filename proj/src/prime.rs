@@ -1,3 +1,4 @@
+use plotters::prelude::LogScalable;
 use rand::{thread_rng, Rng};
 use rug::integer::IsPrime;
 use rug::rand::RandState;
@@ -6,7 +7,8 @@ use std::ops::Range;
 use std::fs;
 use std::io::{BufReader, BufRead, Write};
 use std::str::FromStr;
-use crate::random::{randint_bits, randint_digits};
+use std::time::Instant;
+use crate::random::{randint_bits_odd, randint_bits};
 use crate::integer_computations::pow_rug;
 
 
@@ -65,7 +67,7 @@ pub fn generate_non_primes() {
 }
 
 
-pub fn generate_small_primes() {
+pub fn generate_small_primes(n: usize) {
     println!("Opening file ./small-primes");
     let mut file = fs::OpenOptions::new()
         .create(true)
@@ -74,7 +76,6 @@ pub fn generate_small_primes() {
         .open("small-primes")
         .unwrap();
 
-    let n = 200;
     let mut p: Integer = Integer::from(2);
     
     println!("Generating list of small primes...");
@@ -113,11 +114,11 @@ pub fn fermat_is_prime(n: &Integer, reps: usize) -> bool {
 }
 
 
-// For n an odd prime with n-1 = 2^s * r with r odd and a in [1, n-1] such that n and a are relatively prime we have: 
+// For n an odd prime with n-1 = 2^s * r with r odd and a in [1, n-1] we have: 
 //      a^r = 1 (mod n)    or    a^(2^j * r) = -1 (mod n), for j in [0, s-1]
 pub fn rabin_miller_is_prime(n: &Integer, reps: usize) -> bool {
-    if !n.get_bit(0) {
-        return false;
+    if *n == 2 {
+        return true;
     }
 
     let mut rng = RandState::new();
@@ -153,12 +154,76 @@ pub fn rabin_miller_is_prime(n: &Integer, reps: usize) -> bool {
 }
 
 
-pub fn find_prime_with_bit_length(bits: usize, n: usize) -> Integer {
-    let mut p: Integer = randint_bits(bits);
-    while !is_likely_prime_with_trial_division(&p, n) {
-        p = randint_bits(bits);
+pub fn find_prime_with_bit_length(bits: usize, t: usize) -> Integer {
+    let mut p: Integer = randint_bits_odd(bits);
+    while !is_likely_prime_with_trial_division(&p, t) {
+        p = randint_bits_odd(bits);
     }
     p
+}
+
+
+pub fn count_candidates_in_find_prime_with_bit_length(bits: usize, t: usize) -> usize {
+    let mut p: Integer = randint_bits_odd(bits);
+    let mut count = 1;
+    while !is_likely_prime_with_trial_division(&p, t) {
+        count += 1;
+        p = randint_bits_odd(bits);
+    }
+    count
+}
+
+
+pub fn count_candidates_in_find_prime_with_bit_length_avg(bits: usize, n: usize, t: usize) -> f64 {
+    let mut count = 0;
+    for _ in 0..n {
+        count += count_candidates_in_find_prime_with_bit_length(bits, t);
+    }
+    count.as_f64()/n.as_f64()
+}
+
+
+pub fn time_finding_primes() {
+    let bits = 300;
+    let loops = 80;
+    let t = 20;
+
+    let mut number_of_primes_for_trial_division = 0;
+    let increase = 50;
+    let number_of_increases = 40;
+    let mut timing_vector = Vec::with_capacity(number_of_increases);
+
+
+    for _ in 0..number_of_increases {
+        number_of_primes_for_trial_division += increase;
+        generate_small_primes(number_of_primes_for_trial_division);
+        let now = Instant::now();
+        for _ in 0..loops {
+            find_prime_with_bit_length(bits, t);
+        }
+        let elapsed = now.elapsed()/loops;
+        timing_vector.push((number_of_primes_for_trial_division, elapsed.as_micros()))
+    }
+
+    for (num_of_precomputations, elapsed_as_millis) in timing_vector.iter() {
+        println!("{}, {}", num_of_precomputations, elapsed_as_millis);
+    }
+}
+
+
+pub fn find_prime_with_bit_length_using_interval(bits: usize, d: usize, t: usize) -> Option<Integer> {
+    let mut n = randint_bits(bits);
+    if is_likely_prime_with_trial_division(&n, t) {
+        return Some(n)
+    }
+    for _ in 0..d {
+        n += 1;
+        if is_likely_prime_with_trial_division(&n, t) {
+            return Some(n)
+        }
+    }
+
+    None
 }
 
 

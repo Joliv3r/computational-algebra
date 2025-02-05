@@ -13,6 +13,14 @@ pub fn randint_bits(bits: usize) -> Integer {
 }
 
 
+pub fn randint_bits_odd(bits: usize) -> Integer {
+    let mut n = randint_bits(bits-1);
+    n <<= 1;
+    n += 1;
+    n
+}
+
+
 pub fn randint_digits(digits: usize) -> Integer {
     let mut rng = thread_rng();
     let mut n: Integer = Integer::from(rng.gen_range(1..=9));
