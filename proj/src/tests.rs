@@ -1,6 +1,8 @@
 use std::{sync::Arc, time::Duration};
 use std::time::Instant;
 use crate::{algebraic_structure::{finite_field::FiniteField, Element}, integer_computations::naive_pow};
+use rug::integer::IsPrime;
+use rug::ops::PowAssign;
 use rug::Integer;
 use plotters::prelude::*;
 use plotters::coord::combinators::IntoLogRange;
@@ -51,7 +53,11 @@ pub fn check_timing_against_naive(a: &Integer, b: &Integer, p: &Integer, n: usiz
 
 
 pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::Error>> {
-    let mut p = Integer::from(17);
+    let mut q = Integer::from(17);
+    let mut p = Integer::from(2);
+    p.pow_assign(127);
+    p = p-1;
+    assert!(p.is_probably_prime(20) != IsPrime::No);
     // let mut rng = RandState::new();
     let mut naive_vec: Vec<(u128, u128)> = Vec::new();
     let mut square_vec: Vec<(u128, u128)> = Vec::new();
@@ -63,16 +69,16 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
         // }
         // last_bit_number = p.significant_bits();
         for _ in 0..5 {
-            p.next_prime_mut();
+            q.next_prime_mut();
         }
 
-        let a = randint_digits(p.to_string().len());
+        let a = randint_digits(q.to_string().len());
         // let a = p.clone() - Integer::ONE.clone();
         // let b = randint_digits(p.significant_digits::<usize>());
-        let b = p.clone();
+        let b = q.clone();
         let (elapsed_naive, elapsed_square) = check_timing_against_naive(&a, &b, &p, m);
-        naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_nanos()));
-        square_vec.push((p.to_u128().unwrap(), elapsed_square.as_nanos()));
+        naive_vec.push((q.to_u128().unwrap(), elapsed_naive.as_nanos()));
+        square_vec.push((q.to_u128().unwrap(), elapsed_square.as_nanos()));
         if elapsed_naive.as_nanos() > max_time_naive {
             max_time_naive = elapsed_naive.as_nanos();
         }
@@ -90,7 +96,7 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
         .margin(40)
         .x_label_area_size(30)
         .y_label_area_size(50)
-        .build_cartesian_2d(0..p.to_u128().unwrap_or(u128::MAX), 0..max_time_naive)?;
+        .build_cartesian_2d(0..q.to_u128().unwrap_or(u128::MAX), 0..max_time_naive)?;
 
     chart.configure_mesh()
         .x_desc("Prime number")
@@ -148,6 +154,10 @@ pub fn plot_timing_naive_square(n: usize, m: usize) -> Result<(), Box<dyn std::e
 
 pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::Error>> {
     let mut p = Integer::ONE.clone();
+    let mut q = Integer::from(2);
+    q.pow_assign(127);
+    q = q-1;
+    assert!(q.is_probably_prime(20) != IsPrime::No);
     // let mut rng = RandState::new();
     let mut naive_vec: Vec<(u128, u128)> = Vec::new();
     let mut max_time_naive = 0;
@@ -167,7 +177,7 @@ pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::E
         // let b = randint_digits(p.to_string().len());
         let b = p.clone();
         println!("{}", b);
-        let elapsed_naive = check_timing_naive(&a, &b, &p, m);
+        let elapsed_naive = check_timing_naive(&a, &b, &q, m);
         naive_vec.push((p.to_u128().unwrap(), elapsed_naive.as_micros()));
         if elapsed_naive.as_micros() > max_time_naive {
             max_time_naive = elapsed_naive.as_micros();
@@ -222,6 +232,10 @@ pub fn plot_timing_naive(n: usize, m: usize) -> Result<(), Box<dyn std::error::E
 
 pub fn plot_timing_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::Error>> {
 
+    let mut q = Integer::from(2);
+    q.pow_assign(127);
+    q = q-1;
+    assert!(q.is_probably_prime(20) != IsPrime::No);
     let mut p = Integer::ONE.clone();
     // let mut rng = RandState::new();
     let mut square_vec: Vec<(u64, u64)> = Vec::new();
@@ -241,7 +255,7 @@ pub fn plot_timing_square(n: usize, m: usize) -> Result<(), Box<dyn std::error::
         // let b = randint_digits(p.significant_digits::<usize>());
         // let a = p.clone() - Integer::ONE.clone();
         let b = p.clone();
-        let elapsed_square = check_timing_square(&a, &b, &p, m);
+        let elapsed_square = check_timing_square(&a, &b, &q, m);
         square_vec.push((p.to_u64().unwrap(), elapsed_square.as_nanos() as u64));
         if elapsed_square.as_nanos() > max_time_square {
             max_time_square = elapsed_square.as_nanos();

@@ -1,4 +1,3 @@
-use plotters::prelude::LogScalable;
 use rand::{thread_rng, Rng};
 use rug::integer::IsPrime;
 use rug::rand::RandState;
@@ -7,7 +6,7 @@ use std::ops::Range;
 use std::fs;
 use std::io::{BufReader, BufRead, Write};
 use std::str::FromStr;
-use std::time::Instant;
+use crate::prime_statistics;
 use crate::random::{randint_bits_odd, randint_bits};
 use crate::integer_computations::pow_rug;
 
@@ -79,7 +78,7 @@ pub fn generate_small_primes(n: usize) {
     let mut p: Integer = Integer::from(2);
     
     println!("Generating list of small primes...");
-    for _ in 0..n {
+    while p < n {
         if let Err(e) = writeln!(file, "{}", &p) {
             eprintln!("Couldn't write to file: {}", e);
         }
@@ -88,17 +87,23 @@ pub fn generate_small_primes(n: usize) {
 }
 
 
-pub fn is_likely_prime_with_trial_division(candidate: &Integer, n: usize) -> bool {
+pub fn is_likely_prime_with_trial_division(candidate: &Integer, n: usize, bound: usize) -> bool {
+    if bound == 0 {
+        return rabin_miller_is_prime(candidate, n);
+    }
     let small_primes = fs::File::open("small-primes").expect("small-primes file should have been generated");
     let reader = BufReader::new(small_primes);
     for prime in reader.lines() {
         let p: Integer = Integer::from_str(&prime.unwrap()).expect("All entries of small-primes should be integers.");
+        if p > bound {
+            break;
+        }
         if candidate > &p && candidate%p == 0 {
             return false
         }         
     }
 
-    fermat_is_prime(candidate, n)
+    rabin_miller_is_prime(candidate, n)
 }
 
 
@@ -118,6 +123,8 @@ pub fn fermat_is_prime(n: &Integer, reps: usize) -> bool {
 //      a^r = 1 (mod n)    or    a^(2^j * r) = -1 (mod n), for j in [0, s-1]
 pub fn rabin_miller_is_prime(n: &Integer, reps: usize) -> bool {
     if *n == 2 {
+        return true;
+    } else if *n == 3 {
         return true;
     }
 
@@ -156,75 +163,111 @@ pub fn rabin_miller_is_prime(n: &Integer, reps: usize) -> bool {
 
 pub fn find_prime_with_bit_length(bits: usize, t: usize) -> Integer {
     let mut p: Integer = randint_bits_odd(bits);
-    while !is_likely_prime_with_trial_division(&p, t) {
+    while !rabin_miller_is_prime(&p, t) {
         p = randint_bits_odd(bits);
     }
     p
 }
 
 
-pub fn count_candidates_in_find_prime_with_bit_length(bits: usize, t: usize) -> usize {
+pub fn find_prime_with_bit_length_using_trial_division(bits: usize, t: usize, bound: usize) -> Integer {
     let mut p: Integer = randint_bits_odd(bits);
-    let mut count = 1;
-    while !is_likely_prime_with_trial_division(&p, t) {
-        count += 1;
+    while !is_likely_prime_with_trial_division(&p, t, bound) {
         p = randint_bits_odd(bits);
     }
-    count
+    p
 }
 
 
-pub fn count_candidates_in_find_prime_with_bit_length_avg(bits: usize, n: usize, t: usize) -> f64 {
-    let mut count = 0;
-    for _ in 0..n {
-        count += count_candidates_in_find_prime_with_bit_length(bits, t);
-    }
-    count.as_f64()/n.as_f64()
-}
-
-
-pub fn time_finding_primes() {
-    let bits = 300;
-    let loops = 80;
-    let t = 20;
-
-    let mut number_of_primes_for_trial_division = 0;
-    let increase = 50;
-    let number_of_increases = 40;
-    let mut timing_vector = Vec::with_capacity(number_of_increases);
-
-
-    for _ in 0..number_of_increases {
-        number_of_primes_for_trial_division += increase;
-        generate_small_primes(number_of_primes_for_trial_division);
-        let now = Instant::now();
-        for _ in 0..loops {
-            find_prime_with_bit_length(bits, t);
-        }
-        let elapsed = now.elapsed()/loops;
-        timing_vector.push((number_of_primes_for_trial_division, elapsed.as_micros()))
-    }
-
-    for (num_of_precomputations, elapsed_as_millis) in timing_vector.iter() {
-        println!("{}, {}", num_of_precomputations, elapsed_as_millis);
-    }
-}
-
-
-pub fn find_prime_with_bit_length_using_interval(bits: usize, d: usize, t: usize) -> Option<Integer> {
+pub fn find_prime_with_bit_length_using_interval(bits: usize, d: usize, t: usize, bound: usize) -> Option<Integer> {
     let mut n = randint_bits(bits);
-    if is_likely_prime_with_trial_division(&n, t) {
+    if is_likely_prime_with_trial_division(&n, t, bound) {
         return Some(n)
     }
     for _ in 0..d {
         n += 1;
-        if is_likely_prime_with_trial_division(&n, t) {
+        if is_likely_prime_with_trial_division(&n, t, bound) {
             return Some(n)
         }
     }
 
     None
 }
+
+
+pub fn find_prime_in_interval_with_sieving(a: &Integer, d: usize, t: usize, bound: usize) -> Option<Integer> {
+    let small_primes = fs::File::open("small-primes").expect("small-primes file should have been generated");
+    let reader = BufReader::new(small_primes);
+
+    let mut vec: Vec<bool> = vec![true; d];
+    let mut capacity = d;
+
+    for prime in reader.lines() {
+        let p = prime.expect("Line should exist").parse::<usize>().expect("Lines should be primes");
+        if p > bound {
+            break;
+        }
+
+        let off_set: usize = (p - (a%p).complete()).to_usize().expect("Should be small enough");
+        let mut count = 0;
+        loop {
+            let index: usize = count*p + &off_set;
+            if index >= d {
+                break;
+            }
+
+            if vec[index] {
+                vec[index] = false;
+                capacity -= 1;
+            }
+            count += 1;
+        }
+    }
+
+    let mut sieving_vec: Vec<usize> = Vec::with_capacity(capacity);   
+
+    for (i, j) in vec.iter().enumerate() {
+        if *j {
+            sieving_vec.push(i);
+        }
+    }
+
+    if sieving_vec.len() == 0 {
+        return None
+    }
+
+    let mut rng = thread_rng();
+    let mut index = rng.gen_range(0..capacity);
+    let mut p: Integer = (a + sieving_vec[index]).into();
+
+    while !rabin_miller_is_prime(&p, t) {
+        sieving_vec.remove(index);
+        if sieving_vec.len() == 0 {
+            return None
+        }
+        capacity -= 1;
+        p = (a + sieving_vec[rng.gen_range(0..capacity)]).into();
+        index = rng.gen_range(0..capacity);
+    }
+    Some(p)
+}
+
+
+pub fn find_prime_with_bit_length_using_sieving(bits: usize, t: usize, bound: usize) -> Integer {
+    if bound == 0 {
+        find_prime_with_bit_length(bits, t);
+    }
+    let probability = 0.95;
+    let d = prime_statistics::approx_width_in_random_interval_search(bits, probability);
+    
+    loop {
+        let a = randint_bits(bits);
+        if let Some(p) = find_prime_in_interval_with_sieving(&a, d, t, bound) {
+            return p
+        }
+    }
+}
+
 
 
 #[cfg(test)]
@@ -238,10 +281,11 @@ mod test {
         let file = fs::File::open("primes").unwrap();
         let reader = BufReader::new(file);
         let t = 30;
+        let bound = 2000;
 
         for line in reader.lines() {
             let p: Integer = Integer::from_str(&line.unwrap()).unwrap();
-            assert_eq!(true, is_likely_prime_with_trial_division(&p, t), "Identified {} as non-prime", &p);
+            assert_eq!(true, is_likely_prime_with_trial_division(&p, t, bound), "Identified {} as non-prime", &p);
             assert_eq!(true, fermat_is_prime(&p, t), "Identified {} as non-prime using Fermat-test", &p);
             assert_eq!(true, rabin_miller_is_prime(&p, t), "Identified {} as non-prime using Rabin-Miller", &p);
         }
@@ -252,10 +296,11 @@ mod test {
         let file = fs::File::open("non-primes").unwrap();
         let reader = BufReader::new(file);
         let t = 30;
+        let bound = 2000;
 
         for line in reader.lines() {
             let n: Integer = Integer::from_str(&line.unwrap()).unwrap();
-            assert_eq!(false, is_likely_prime_with_trial_division(&n, t), "Identified {} as prime", &n);
+            assert_eq!(false, is_likely_prime_with_trial_division(&n, t, bound), "Identified {} as prime", &n);
             assert_eq!(false, fermat_is_prime(&n, t), "Identified {} as prime using Fermat-test", &n);
             assert_eq!(false, rabin_miller_is_prime(&n, t), "Identified {} as prime using Rabin-Miller", &n);
         }
@@ -263,14 +308,30 @@ mod test {
 
     #[test]
     fn test_find_prime_with_bit_length() {
-        let reps = 50;
+        let reps = 25;
         let t = 30;
+        let bound_td = 200;
+        let bound_sieving = 30;
         let mut rng = thread_rng();
         for _ in 0..reps {
-            let bits = rng.gen_range(1..200);
+            let bits = rng.gen_range(5..200);
             let p = find_prime_with_bit_length(bits, t);
             assert!(p.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime", &p);
-            assert!(p.significant_bits() == bits as u32);
+            assert_eq!(p.significant_bits(), bits as u32);
+        }
+
+        for _ in 0..reps {
+            let bits = rng.gen_range(5..200);
+            let trial_division = find_prime_with_bit_length_using_trial_division(bits, t, bound_td);
+            assert!(trial_division.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime with trial_division", &trial_division);
+            assert_eq!(trial_division.significant_bits(), bits as u32);
+        }
+
+        for _ in 0..reps {
+            let bits = rng.gen_range(5..200);
+            let sieving = find_prime_with_bit_length_using_sieving(bits, t, bound_sieving);
+            assert!(sieving.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime with sieving", &sieving);
+            assert_eq!(sieving.significant_bits(), bits as u32);
         }
     }
 }
