@@ -1,5 +1,5 @@
 use crate::algebraic_structure::{Element, HasAdd, HasMul, HasRepresentation, HasSub};
-use crate::integer_computations::{extended_euclidean_ordered, extended_euclidean_to_integers, pow_rug};
+use crate::integers::integer_computations::{extended_euclidean_ordered, extended_euclidean_to_integers, pow_rug};
 use rug::ops::SubFrom;
 use rug::{integer::IsPrime, Complete, Integer};
 use std::sync::Arc;

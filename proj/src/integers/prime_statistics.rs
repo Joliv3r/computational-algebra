@@ -1,4 +1,4 @@
-use crate::prime::{find_prime_in_interval_with_sieving, find_prime_with_bit_length, find_prime_with_bit_length_using_sieving, find_prime_with_bit_length_using_trial_division, generate_small_primes, is_likely_prime_with_trial_division, rabin_miller_is_prime};
+use crate::integers::prime::{find_prime_in_interval_with_sieving, find_prime_with_bit_length, find_prime_with_bit_length_using_sieving, find_prime_with_bit_length_using_trial_division, generate_small_primes, is_likely_prime_with_trial_division, rabin_miller_is_prime};
 use crate::random::{randint_bits, randint_bits_odd};
 use rug::Integer;
 use std::time::Instant;

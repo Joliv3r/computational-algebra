@@ -6,9 +6,9 @@ use std::ops::Range;
 use std::fs;
 use std::io::{BufReader, BufRead, Write};
 use std::str::FromStr;
-use crate::prime_statistics;
+use crate::integers::prime_statistics;
 use crate::random::{randint_bits_odd, randint_bits};
-use crate::integer_computations::pow_rug;
+use crate::integers::integer_computations::pow_rug;
 
 
 pub fn generate_primes() {
