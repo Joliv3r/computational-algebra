@@ -1,5 +1,6 @@
-use crate::integers::prime::{find_prime_in_interval_with_sieving, find_prime_with_bit_length, find_prime_with_bit_length_using_sieving, find_prime_with_bit_length_using_trial_division, generate_small_primes, is_likely_prime_with_trial_division, rabin_miller_is_prime};
-use crate::random::{randint_bits, randint_bits_odd};
+#![allow(dead_code)]
+use beralg::integers::prime::{find_prime_in_interval_with_sieving, find_prime_with_bit_length, find_prime_with_bit_length_using_sieving, find_prime_with_bit_length_using_trial_division, generate_small_primes, is_likely_prime_with_trial_division, rabin_miller_is_prime};
+use beralg::random::{randint_bits, randint_bits_odd};
 use rug::Integer;
 use std::time::Instant;
 use std::io::{BufRead, BufReader, Write};
@@ -7,7 +8,7 @@ use std::fs;
 use std::str::FromStr;
 
 
-pub fn count_candidates_in_find_prime_with_bit_length(bits: usize, t: usize, bound: usize) -> usize {
+fn count_candidates_in_find_prime_with_bit_length(bits: usize, t: usize, bound: usize) -> usize {
     let mut p: Integer = randint_bits_odd(bits);
     let mut count = 1;
     while !is_likely_prime_with_trial_division(&p, t, bound) {
@@ -18,7 +19,7 @@ pub fn count_candidates_in_find_prime_with_bit_length(bits: usize, t: usize, bou
 }
 
 
-pub fn count_candidates_in_find_prime_with_bit_length_avg(bits: usize, n: usize, t: usize, bound: usize) -> f64 {
+fn count_candidates_in_find_prime_with_bit_length_avg(bits: usize, n: usize, t: usize, bound: usize) -> f64 {
     let mut count = 0;
     for _ in 0..n {
         count += count_candidates_in_find_prime_with_bit_length(bits, t, bound);
@@ -27,7 +28,7 @@ pub fn count_candidates_in_find_prime_with_bit_length_avg(bits: usize, n: usize,
 }
 
 
-pub fn width_in_random_interval_search(bits: usize, probability: f64) -> usize {
+fn width_in_random_interval_search(bits: usize, probability: f64) -> usize {
     let mut d = 1;
     while (1f64 - 1f64/((bits as f64)*2f64.ln())).powf(d as f64) > 1f64 - probability {
         d += 1;
@@ -36,13 +37,12 @@ pub fn width_in_random_interval_search(bits: usize, probability: f64) -> usize {
 }
 
 
-
-pub fn expected_candidates(bits: usize) -> f64 {
+fn expected_candidates(bits: usize) -> f64 {
     (bits as f64)*2f64.ln()
 }
 
 
-pub fn expected_candidates_with_filtration(bits: usize, bound: usize) -> f64 {
+fn expected_candidates_with_filtration(bits: usize, bound: usize) -> f64 {
     let small_primes = fs::File::open("small-primes").expect("small-primes file should have been generated");
     let reader = BufReader::new(small_primes);
     let mut prod: f64 = 1.;
@@ -58,7 +58,7 @@ pub fn expected_candidates_with_filtration(bits: usize, bound: usize) -> f64 {
 }
 
 
-pub fn time_finding_primes() {
+fn time_finding_primes() {
     let bits = 300;
     let loops = 80;
     let t = 20;
@@ -86,7 +86,7 @@ pub fn time_finding_primes() {
 }
 
 
-pub fn generate_list_of_composite_until_prime(bits: usize, append: bool) {
+fn generate_list_of_composite_until_prime(bits: usize, append: bool) {
     println!("Opening file ./trial-division");
     let mut file = fs::OpenOptions::new()
         .write(true)
@@ -111,7 +111,7 @@ pub fn generate_list_of_composite_until_prime(bits: usize, append: bool) {
 }
 
 
-pub fn generate_random_numbers(bits: usize, number: usize) {
+fn generate_random_numbers(bits: usize, number: usize) {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -127,7 +127,7 @@ pub fn generate_random_numbers(bits: usize, number: usize) {
 }
 
 
-pub fn find_good_number_of_precomputed_primes(bits: usize) {
+fn find_good_number_of_precomputed_primes(bits: usize) {
     let increment = 50;
     let stop = 1000;
     let loops = 40;
@@ -158,7 +158,7 @@ pub fn find_good_number_of_precomputed_primes(bits: usize) {
 }
 
 
-pub fn find_good_number_of_primes_for_sieving(bits: usize) {
+fn find_good_number_of_primes_for_sieving(bits: usize) {
     let increment = 1000;
     let start = 2000;
     let stop = 17000;
@@ -195,7 +195,7 @@ pub fn find_good_number_of_primes_for_sieving(bits: usize) {
 }
 
 
-pub fn time_finding_primes_trial_division_vs_sieving() {
+fn time_finding_primes_trial_division_vs_sieving() {
     let bits = 500;
     let loops = 1000;
     let bound_td = 150;
@@ -216,4 +216,9 @@ pub fn time_finding_primes_trial_division_vs_sieving() {
     let elapsed_sieving = now.elapsed().as_micros()/loops;
 
     println!("sieving: {}", elapsed_sieving);
+}
+
+
+fn main() {
+    time_finding_primes_trial_division_vs_sieving();
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{sync::Arc, time::Duration};
 use std::time::Instant;
 use beralg::{algebraic_structure::{finite_field::FiniteField, Element}, integers::integer_computations::naive_pow};

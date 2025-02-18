@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod test {
+mod prime {
     use std::{io::{BufRead, BufReader}, str::FromStr, fs};
     use rug::{Integer, integer::IsPrime};
     use beralg::integers::prime::*;

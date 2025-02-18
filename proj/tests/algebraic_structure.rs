@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod algebraic_structure {
     use beralg::algebraic_structure::Element;
     use beralg::algebraic_structure::finite_field::{MultiplicativeGroup, FiniteField};
     use rug::{Integer, Complete, rand::RandState};

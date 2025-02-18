@@ -6,85 +6,8 @@ use std::ops::Range;
 use std::fs;
 use std::io::{BufReader, BufRead, Write};
 use std::str::FromStr;
-use crate::integers::prime_statistics;
 use crate::random::{randint_bits_odd, randint_bits};
 use crate::integers::integer_computations::pow_rug;
-
-
-pub fn generate_primes() {
-    println!("Opening file ./primes");
-    // Rewrites file.
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open("primes")
-        .unwrap();
-    
-    
-    let mut p: Integer = Integer::ONE.clone();
-    let number_of_primes = 1000;
-    let space_of_primes = 100000;
-
-    println!("Starting prime generating...");
-    for _ in 0..number_of_primes {
-        for _ in 0..space_of_primes {
-            p.next_prime_mut();
-        }
-        if let Err(e) = writeln!(file, "{}", &p) {
-            eprintln!("Couldn't write to file: {}", e)
-        }
-    }
-}
-
-
-pub fn generate_non_primes() {
-    println!("Opening file ./non-primes");
-    // Rewrites file.
-    let mut file = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open("non-primes")
-        .unwrap();
-
-    let primes = fs::File::open("primes").expect("File should exist");
-    let reader = BufReader::new(primes);
-
-    println!("Generating list of non-primes...");
-    for line in reader.lines() {
-        let mut rng = thread_rng();
-        let p: Integer = Integer::from_str(&line.unwrap()).expect("All entries of file should be numbers"); 
-        let mut n: Integer = (&p + rng.gen_range::<usize, Range<usize>>(1..1000)).complete();
-        while n.is_probably_prime(30) != IsPrime::No {
-            n = (&p + rng.gen_range::<usize, Range<usize>>(1..1000)).complete();
-        }
-
-        if let Err(e) = writeln!(file, "{}", &n) {
-            eprintln!("Couldn't write to file: {}", e);
-        }
-    }
-}
-
-
-pub fn generate_small_primes(n: usize) {
-    println!("Opening file ./small-primes");
-    let mut file = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open("small-primes")
-        .unwrap();
-
-    let mut p: Integer = Integer::from(2);
-    
-    println!("Generating list of small primes...");
-    while p < n {
-        if let Err(e) = writeln!(file, "{}", &p) {
-            eprintln!("Couldn't write to file: {}", e);
-        }
-        p.next_prime_mut();
-    }
-}
 
 
 pub fn is_likely_prime_with_trial_division(candidate: &Integer, n: usize, bound: usize) -> bool {
@@ -253,12 +176,17 @@ pub fn find_prime_in_interval_with_sieving(a: &Integer, d: usize, t: usize, boun
 }
 
 
+fn approx_width_in_random_interval_search(bits: usize, probability: f64) -> usize {
+    ( - probability/( (1f64 - 1f64/((bits as f64)*2f64.ln())) ).ln() ) as usize
+}
+
+
 pub fn find_prime_with_bit_length_using_sieving(bits: usize, t: usize, bound: usize) -> Integer {
     if bound == 0 {
         find_prime_with_bit_length(bits, t);
     }
     let probability = 0.95;
-    let d = prime_statistics::approx_width_in_random_interval_search(bits, probability);
+    let d = approx_width_in_random_interval_search(bits, probability);
     
     loop {
         let a = randint_bits(bits);
@@ -270,68 +198,3 @@ pub fn find_prime_with_bit_length_using_sieving(bits: usize, t: usize, bound: us
 
 
 
-#[cfg(test)]
-mod test {
-    use std::{io::{BufRead, BufReader}, str::FromStr};
-
-    use super::*;
-
-    #[test]
-    fn test_primality_test_for_primes() {
-        let file = fs::File::open("primes").unwrap();
-        let reader = BufReader::new(file);
-        let t = 30;
-        let bound = 2000;
-
-        for line in reader.lines() {
-            let p: Integer = Integer::from_str(&line.unwrap()).unwrap();
-            assert_eq!(true, is_likely_prime_with_trial_division(&p, t, bound), "Identified {} as non-prime", &p);
-            assert_eq!(true, fermat_is_prime(&p, t), "Identified {} as non-prime using Fermat-test", &p);
-            assert_eq!(true, rabin_miller_is_prime(&p, t), "Identified {} as non-prime using Rabin-Miller", &p);
-        }
-    }
-
-    #[test]
-    fn test_primality_test_for_non_primes() {
-        let file = fs::File::open("non-primes").unwrap();
-        let reader = BufReader::new(file);
-        let t = 30;
-        let bound = 2000;
-
-        for line in reader.lines() {
-            let n: Integer = Integer::from_str(&line.unwrap()).unwrap();
-            assert_eq!(false, is_likely_prime_with_trial_division(&n, t, bound), "Identified {} as prime", &n);
-            assert_eq!(false, fermat_is_prime(&n, t), "Identified {} as prime using Fermat-test", &n);
-            assert_eq!(false, rabin_miller_is_prime(&n, t), "Identified {} as prime using Rabin-Miller", &n);
-        }
-    }
-
-    #[test]
-    fn test_find_prime_with_bit_length() {
-        let reps = 25;
-        let t = 30;
-        let bound_td = 200;
-        let bound_sieving = 30;
-        let mut rng = thread_rng();
-        for _ in 0..reps {
-            let bits = rng.gen_range(5..200);
-            let p = find_prime_with_bit_length(bits, t);
-            assert!(p.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime", &p);
-            assert_eq!(p.significant_bits(), bits as u32);
-        }
-
-        for _ in 0..reps {
-            let bits = rng.gen_range(5..200);
-            let trial_division = find_prime_with_bit_length_using_trial_division(bits, t, bound_td);
-            assert!(trial_division.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime with trial_division", &trial_division);
-            assert_eq!(trial_division.significant_bits(), bits as u32);
-        }
-
-        for _ in 0..reps {
-            let bits = rng.gen_range(5..200);
-            let sieving = find_prime_with_bit_length_using_sieving(bits, t, bound_sieving);
-            assert!(sieving.is_probably_prime(t as u32) != IsPrime::No, "Found {} as prime with sieving", &sieving);
-            assert_eq!(sieving.significant_bits(), bits as u32);
-        }
-    }
-}
