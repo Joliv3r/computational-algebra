@@ -1,10 +1,8 @@
 use rand::{thread_rng, Rng};
-use rug::integer::IsPrime;
 use rug::rand::RandState;
 use rug::{Complete, Integer};
-use std::ops::Range;
 use std::fs;
-use std::io::{BufReader, BufRead, Write};
+use std::io::{BufReader, BufRead};
 use std::str::FromStr;
 use crate::random::{randint_bits_odd, randint_bits};
 use crate::integers::integer_computations::pow_rug;
