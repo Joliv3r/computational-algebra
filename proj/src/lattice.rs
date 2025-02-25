@@ -32,7 +32,9 @@ impl Lattice {
     }
 
     fn calculate_gram_schmidt_basis(&mut self) {
-        self.gram_schmidt_basis = Some(methods::gram_schmidt_columns(&self.basis));
+        if self.gram_schmidt_basis.is_none() {
+            self.gram_schmidt_basis = Some(methods::gram_schmidt_columns(&self.basis));
+        }
     }
 
     pub fn get_length_of_basis_vectors(&self) -> usize {

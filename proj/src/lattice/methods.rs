@@ -68,9 +68,7 @@ impl Lattice {
             return Err("Vector size not compatible with lattice".to_string())
         }
 
-        if self.gram_schmidt_basis.is_none() {
-            self.calculate_gram_schmidt_basis();
-        }
+        self.calculate_gram_schmidt_basis();
         let mut w = v.clone();
         let dim = self.get_number_of_basis_vectors();
         let mut y = Array1::zeros(cols);
@@ -98,7 +96,6 @@ impl Lattice {
     // with A > ||v||^2 and B_j = ||b_j||^2 and µ_{j,i} = <b_i, b*_i>/||b*_j||^2.
     pub fn shortest_vector_by_enumeration(&self) -> Array1<f64> {
         let A = self.get_shortest_basis_vector_length();
-        todo!()
     }
 }
 
