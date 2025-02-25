@@ -61,29 +61,31 @@ fn gram_schmidt_columns(matrix: &Array2<f64>) -> Array2<f64> {
 }
 
 
-pub fn babai_nearest_plane(lattice: &Lattice, v: &Array1<f64>) -> Result<Array1<f64>, String> {
-    let cols = lattice.get_length_of_basis_vectors();
-    if cols != v.len() {
-        return Err("Vector size not compatible with lattice".to_string())
+impl Lattice {
+    pub fn babai_nearest_plane(&self, v: &Array1<f64>) -> Result<Array1<f64>, String> {
+        let cols = self.get_length_of_basis_vectors();
+        if cols != v.len() {
+            return Err("Vector size not compatible with lattice".to_string())
+        }
+
+        let gram_schmidt_basis = gram_schmidt_columns(&self.basis);
+        let mut w = v.clone();
+        let dim = self.get_number_of_basis_vectors();
+        let mut y = Array1::zeros(cols);
+
+        for i in (0..dim).into_iter().rev() {
+            let gs_i = Array1::from_vec(gram_schmidt_basis.column(i).to_vec());
+            let b_i = self.get_basis_vector(i);
+            let l_i = &w.dot(&gs_i)/gs_i.dot(&gs_i);
+            let l_i_rounded = l_i.round();
+
+            y = y + &b_i*l_i_rounded;
+
+            w = w - gs_i*(l_i - l_i_rounded) - b_i*l_i_rounded;
+        }
+
+        Ok(y)
     }
-
-    let gram_schmidt_basis = gram_schmidt_columns(&lattice.basis);
-    let mut w = v.clone();
-    let dim = lattice.get_number_of_basis_vectors();
-    let mut y = Array1::zeros(cols);
-
-    for i in (0..dim).into_iter().rev() {
-        let gs_i = Array1::from_vec(gram_schmidt_basis.column(i).to_vec());
-        let b_i = lattice.get_basis_vector(i);
-        let l_i = &w.dot(&gs_i)/gs_i.dot(&gs_i);
-        let l_i_rounded = l_i.round();
-
-        y = y + &b_i*l_i_rounded;
-
-        w = w - gs_i*(l_i - l_i_rounded) - b_i*l_i_rounded;
-    }
-
-    Ok(y)
 }
 
 
