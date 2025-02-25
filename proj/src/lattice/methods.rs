@@ -55,26 +55,28 @@ fn collect_columns_in_vec(matrix: &Array2<f64>) -> Vec<Array1<f64>> {
 }
 
 
-fn gram_schmidt_columns(matrix: &Array2<f64>) -> Array2<f64> {
+pub fn gram_schmidt_columns(matrix: &Array2<f64>) -> Array2<f64> {
     let vec = collect_columns_in_vec(matrix);
     make_matrix_from_column_vectors(&gram_schmidt(&vec))
 }
 
 
 impl Lattice {
-    pub fn babai_nearest_plane(&self, v: &Array1<f64>) -> Result<Array1<f64>, String> {
+    pub fn babai_nearest_plane(&mut self, v: &Array1<f64>) -> Result<Array1<f64>, String> {
         let cols = self.get_length_of_basis_vectors();
         if cols != v.len() {
             return Err("Vector size not compatible with lattice".to_string())
         }
 
-        let gram_schmidt_basis = gram_schmidt_columns(&self.basis);
+        if self.gram_schmidt_basis.is_none() {
+            self.calculate_gram_schmidt_basis();
+        }
         let mut w = v.clone();
         let dim = self.get_number_of_basis_vectors();
         let mut y = Array1::zeros(cols);
 
         for i in (0..dim).into_iter().rev() {
-            let gs_i = Array1::from_vec(gram_schmidt_basis.column(i).to_vec());
+            let gs_i = Array1::from_vec(self.gram_schmidt_basis.as_ref().expect("We have calculated it.").column(i).to_vec().clone());
             let b_i = self.get_basis_vector(i);
             let l_i = &w.dot(&gs_i)/gs_i.dot(&gs_i);
             let l_i_rounded = l_i.round();
@@ -85,6 +87,18 @@ impl Lattice {
         }
 
         Ok(y)
+    }
+
+
+    // Say v = sum_{i=1}^{n} x_j b_j, is the shortest vector. We use that
+    //   -(M_1 + M_2) =< x_i => M_1 - M_2
+    // where
+    //   M_1 = sqrt{ ( A - sum_{j = i+1}^{n} x_j^2 B_j )/B_i }
+    //   M_2 = sum_{j = i+1}^{n} µ_{j,i} x_j
+    // with A > ||v||^2 and B_j = ||b_j||^2 and µ_{j,i} = <b_i, b*_i>/||b*_j||^2.
+    pub fn shortest_vector_by_enumeration(&self) -> Array1<f64> {
+        let A = self.get_shortest_basis_vector_length();
+        todo!()
     }
 }
 
