@@ -1,5 +1,4 @@
 extern crate openblas_src;
-use methods::{gram_schmidt, gram_schmidt_columns};
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis, Slice};
 
 pub mod methods;
@@ -27,7 +26,7 @@ impl Lattice {
     pub fn build_from_basis(basis: &Array2<f64>) -> Lattice {
         Lattice { 
             basis: basis.clone(),
-            gram_schmidt_basis: gram_schmidt_columns(basis).to_owned()
+            gram_schmidt_basis: methods::gram_schmidt_columns(basis).to_owned()
         }
     }
 
@@ -59,7 +58,7 @@ impl Lattice {
     pub fn get_shortest_basis_vector(&self) -> ArrayView1<f64> {
         let first_vec = self.basis.column(0);
         let mut shortest_basis_vector = first_vec;
-        let mut length = first_vec.dot(&first_vec);
+        let length = first_vec.dot(&first_vec);
         for column in self.basis.columns() {
             let vector_length = column.dot(&column);
             if vector_length < length {

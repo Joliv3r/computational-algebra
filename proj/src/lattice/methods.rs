@@ -1,7 +1,5 @@
-use std::thread::current;
-
 use itertools::Itertools;
-use ndarray::{array, Array1, Array2, ArrayView1, Slice};
+use ndarray::{Array1, Array2, Slice};
 
 use super::Lattice;
 
@@ -39,7 +37,6 @@ pub fn gram_schmidt(vectors: &Vec<Array1<f64>>) -> Vec<Array1<f64>> {
 
             v = v - diff;
         }
-        // println!("{}", u);
         orthogonal.push(v.clone());
     }
     orthogonal
@@ -102,7 +99,6 @@ impl Lattice {
         let b_orth_n = self.get_gram_schmidt_basis_vector(self.columns()-1);
         let bound_n = (shortest_length/b_orth_n.dot(&b_orth_n)).sqrt().floor() as i32;
 
-        println!("Bound of n is: {}", bound_n);
 
 
         for x_n in 0..bound_n {
@@ -117,8 +113,7 @@ impl Lattice {
         shortest_vector
     }
 
-    fn shortest_vector_enumeration_steps(&self, depth: usize, mut combination: &Vec<i32>, current_shortes_vector: &Array1<f64>, current_shortest_length: f64) -> (Array1<f64>, f64) {
-        println!("Checking combination: {:#?}", combination);
+    fn shortest_vector_enumeration_steps(&self, depth: usize, combination: &Vec<i32>, current_shortes_vector: &Array1<f64>, current_shortest_length: f64) -> (Array1<f64>, f64) {
         if depth == self.columns() {
             let mut current_vector = Array1::zeros(self.get_length_of_basis_vectors());
             for (x_i, b_i) in combination.iter().zip(self.basis.columns().into_iter().rev()) {
@@ -131,7 +126,6 @@ impl Lattice {
         let mut shortest_vector = current_shortes_vector.clone();
         let mut shortest_length = current_shortest_length.to_owned();
         let (lower_bound, upper_bound) = self.get_enumeration_bounds(combination, depth, shortest_length);
-        println!("We have the bounds: {}, {}", lower_bound, upper_bound);
         for i in lower_bound..=upper_bound {
             let mut new_combination = combination.clone();
             new_combination.push(i);
@@ -151,16 +145,13 @@ impl Lattice {
         let mut M_2: f64 = 0.;
         let b_i = self.get_basis_vector(self.columns()-basis_number);
         let slice: Slice = Slice::from(self.columns()-basis_number-1..self.columns());
-        for (x_j, (b_j, b_orth_j)) in combination.iter().zip(self.get_basis_columns(slice).columns().into_iter().zip(self.get_gram_schmidt_basis_columns(slice).columns().into_iter()).rev()) {
-            println!("Summing with: {}, {}, {}", x_j, b_j, b_orth_j);
+        for (x_j, b_orth_j) in combination.iter().zip(self.get_gram_schmidt_basis_columns(slice).columns().into_iter().rev()) {
             let B_j = b_orth_j.dot(&b_orth_j);
             let mu_ij = b_i.dot(&b_orth_j)/b_orth_j.dot(&b_orth_j);
             sum += (x_j.pow(2) as f64)*B_j;
             M_2 += mu_ij*(*x_j as f64);
         }
-        println!("We have: A={}, sum={}", A, sum);
         let M_1 = ((A-sum)/b_i.dot(&b_i)).sqrt();
-        println!("We got: M1 = {}, M2 = {}", M_1, M_2);
 
         (-(M_1+M_2).ceil() as i32, (M_1-M_2).floor() as i32)
     }
@@ -170,14 +161,22 @@ impl Lattice {
 #[cfg(test)]
 mod lattice_tests {
     use rand::{thread_rng, Rng};
+    use ndarray::array;
 
     use super::*;
 
     fn generate_random_matrix(dimension: usize) -> Array2<f64> {
         let mut rng = thread_rng();
         let mut matrix: Array2<f64> = Array2::zeros((dimension,dimension));
-        matrix.map_inplace(|mut e| {*e = rng.gen_range(0..100) as f64/(rng.gen_range(1..100) as f64)});
+        matrix.map_inplace(|e| {*e = rng.gen_range(0..1000) as f64/(rng.gen_range(1..100) as f64)});
         matrix
+    }
+
+    fn generate_random_vector(dimension: usize) -> Array1<f64> {
+        let mut rng = thread_rng();
+        let mut vector: Array1<f64> = Array1::zeros(dimension);
+        vector.map_inplace(|e| {*e = rng.gen_range(0..1000) as f64/(rng.gen_range(1..100) as f64)});
+        vector
     }
 
     #[test]
@@ -230,7 +229,7 @@ mod lattice_tests {
 
     #[test]
     fn test_gram_schmidt() {
-        let dimension = 7;
+        let dimension = 100;
         let tol = 1e-9;
         let matrix = generate_random_matrix(dimension);
         let b = gram_schmidt_columns(&matrix);
@@ -241,5 +240,17 @@ mod lattice_tests {
                 assert!(ip.abs() < tol, "ip = {}, between index {}, and {}", ip, i, j);
             }
         }
+    }
+
+    #[test]
+    #[allow(unused_must_use)]
+    fn problem_solvers_runs_without_crashing() {
+        let dimension = 25;
+        let matrix = generate_random_matrix(dimension);
+        let vector = generate_random_vector(dimension);
+        let lattice = Lattice::build_from_basis(&matrix);
+
+        lattice.shortest_vector_by_enumeration();
+        lattice.babai_nearest_plane(&vector);
     }
 }
