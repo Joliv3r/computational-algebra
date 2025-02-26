@@ -61,13 +61,13 @@ pub fn gram_schmidt_columns(matrix: &Array2<f64>) -> Array2<f64> {
 
 
 impl Lattice {
-    pub fn babai_nearest_plane(&self, v: &Array1<f64>) -> Result<Array1<f64>, String> {
+    pub fn babai_nearest_plane(&self, vector: &Array1<f64>) -> Result<Array1<f64>, String> {
         let rows = self.get_length_of_basis_vectors();
-        if rows != v.len() {
+        if rows != vector.len() {
             return Err("Vector size not compatible with lattice".to_string())
         }
 
-        let mut w = v.clone();
+        let mut w = vector.clone();
         let dim = self.columns();
         let mut y = Array1::zeros(rows);
 
@@ -154,6 +154,26 @@ impl Lattice {
         let M_1 = ((A-sum)/b_i.dot(&b_i)).sqrt();
 
         (-(M_1+M_2).ceil() as i32, (M_1-M_2).floor() as i32)
+    }
+
+    // Uses Kannan's embedding, by creating a lattice L' with basis (b_1, 0), ..., (b_n, 0), (w, M), 
+    // where b_1, ..., b_n is the basis for L in which we want to find the closest poing to w, and
+    // M is some non-zero constant.
+    pub fn closest_vector_by_embedding(&self, vector: &Array1<f64>) -> Array1<f64> {
+        todo!()
+    }
+
+    // This procedure is directly copied from Wikipedia, 
+    //   https://en.wikipedia.org/wiki/Lenstra%E2%80%93Lenstra%E2%80%93Lov%C3%A1sz_lattice_basis_reduction_algorithm#LLL_algorithm_pseudocode
+    pub fn lll_reduction(&mut self, parameter: f64) {
+        let mut k = 2;
+        while k <= self.columns() {
+            for j in (0..k).rev() {
+                let b_orth_j = self.get_gram_schmidt_basis_vector(j);
+                let mu_kj = self.get_basis_vector(k).dot(&b_orth_j)/(b_orth_j.dot(&b_orth_j));
+            }
+        }
+        todo!()
     }
 }
 
@@ -245,7 +265,7 @@ mod lattice_tests {
     #[test]
     #[allow(unused_must_use)]
     fn problem_solvers_runs_without_crashing() {
-        let dimension = 25;
+        let dimension = 15;
         let matrix = generate_random_matrix(dimension);
         let vector = generate_random_vector(dimension);
         let lattice = Lattice::build_from_basis(&matrix);

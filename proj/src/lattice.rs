@@ -6,8 +6,13 @@ pub mod methods;
 #[derive(Debug)]
 // Due to complications, this is implemented for only f64, mostly because of time constraints.
 // TODO: Make Lattice<T> for some generic type.
+// NOTE: When first implementing this struct my idea was to represent it by a matrix, so you could
+//       do matrix operations. This however was never done, and the representation of a matrix is
+//       not really useful. However too much code have been written for me to do the big rewrite
+//       yet.
+// TODO: Write basis to Vec<Array1<_>> instead of Array2<_>.
 pub struct Lattice {
-    pub basis: Array2<f64>,
+    basis: Array2<f64>,
     gram_schmidt_basis: Array2<f64>,
 }
 
