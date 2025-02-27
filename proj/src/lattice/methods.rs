@@ -67,13 +67,16 @@ impl Lattice {
             return Err("Vector size not compatible with lattice".to_string())
         }
 
-        let mut w = vector.clone();
         let dim = self.columns();
+        if dim == 0 {
+            return Err("Lattice is empty.".to_string())
+        }
+        let mut w = vector.clone();
         let mut y = Array1::zeros(rows);
 
         for i in (0..dim).into_iter().rev() {
-            let gs_i = Array1::from_vec(self.get_gram_schmidt_basis_vector(i).to_vec());
-            let b_i = Array1::from_vec(self.get_basis_vector(i).to_vec());
+            let gs_i = self.get_gram_schmidt_basis_vector(i).expect("Vector should exist.");
+            let b_i = self.get_basis_vector(i).expect("Vector should exist.");
             let l_i = &w.dot(&gs_i)/gs_i.dot(&gs_i);
             let l_i_rounded = l_i.round();
 
@@ -92,11 +95,14 @@ impl Lattice {
     //   M_1 = sqrt{ ( A - sum_{j = i+1}^{n} x_j^2 B_j )/B_i }
     //   M_2 = sum_{j = i+1}^{n} µ_{j,i} x_j
     // with A > ||v||^2 and B_j = ||b_j||^2 and µ_{j,i} = <b_i, b*_j>/||b*_j||^2.
-    pub fn shortest_vector_by_enumeration(&self) -> Array1<f64> {
-        let mut shortest_vector: Array1<f64> = self.get_shortest_basis_vector().to_vec().into();
+    pub fn shortest_vector_by_enumeration(&self) -> Result<Array1<f64>, String> {
+        if self.columns() == 0 {
+            return Err("Lattice is empty.".to_string())
+        }
+        let mut shortest_vector: Array1<f64> = self.get_shortest_basis_vector().expect("Should exist.").to_vec().into();
         let mut shortest_length = shortest_vector.dot(&shortest_vector);
 
-        let b_orth_n = self.get_gram_schmidt_basis_vector(self.columns()-1);
+        let b_orth_n = self.get_gram_schmidt_basis_vector(self.columns()-1).expect("Should exist.");
         let bound_n = (shortest_length/b_orth_n.dot(&b_orth_n)).sqrt().floor() as i32;
 
 
@@ -110,14 +116,14 @@ impl Lattice {
             }
         }
 
-        shortest_vector
+        Ok(shortest_vector)
     }
 
     fn shortest_vector_enumeration_steps(&self, depth: usize, combination: &Vec<i32>, current_shortes_vector: &Array1<f64>, current_shortest_length: f64) -> (Array1<f64>, f64) {
         if depth == self.columns() {
             let mut current_vector = Array1::zeros(self.get_length_of_basis_vectors());
-            for (x_i, b_i) in combination.iter().zip(self.basis.columns().into_iter().rev()) {
-                current_vector = current_vector + b_i.to_owned() * (*x_i as f64);
+            for (x_i, b_i) in combination.iter().zip(self.get_basis_columns(0, self.columns()).expect("Should exist").into_iter().rev()) {
+                current_vector = current_vector + b_i * (*x_i as f64);
             }
             let current_length = current_vector.dot(&current_vector);
             return (current_vector, current_length)
@@ -143,9 +149,10 @@ impl Lattice {
     fn get_enumeration_bounds(&self, combination: &Vec<i32>, basis_number: usize, A: f64) -> (i32, i32) {
         let mut sum: f64 = 0.;
         let mut M_2: f64 = 0.;
-        let b_i = self.get_basis_vector(self.columns()-basis_number);
-        let slice: Slice = Slice::from(self.columns()-basis_number-1..self.columns());
-        for (x_j, b_orth_j) in combination.iter().zip(self.get_gram_schmidt_basis_columns(slice).columns().into_iter().rev()) {
+        let start = self.columns()-basis_number-1;
+        let end = self.columns();
+        let b_i = self.get_basis_vector(self.columns()-basis_number).expect("Function is called only if this vector exists.");
+        for (x_j, b_orth_j) in combination.iter().zip(self.get_gram_schmidt_basis_columns(start, end).expect("Should exist.").into_iter().rev()) {
             let B_j = b_orth_j.dot(&b_orth_j);
             let mu_ij = b_i.dot(&b_orth_j)/b_orth_j.dot(&b_orth_j);
             sum += (x_j.pow(2) as f64)*B_j;
@@ -169,8 +176,8 @@ impl Lattice {
         let mut k = 2;
         while k <= self.columns() {
             for j in (0..k).rev() {
-                let b_orth_j = self.get_gram_schmidt_basis_vector(j);
-                let mu_kj = self.get_basis_vector(k).dot(&b_orth_j)/(b_orth_j.dot(&b_orth_j));
+                // let b_orth_j = self.get_gram_schmidt_basis_vector(j);
+                // let mu_kj = self.get_basis_vector(k).dot(&b_orth_j)/(b_orth_j.dot(&b_orth_j));
             }
         }
         todo!()
@@ -185,11 +192,12 @@ mod lattice_tests {
 
     use super::*;
 
-    fn generate_random_matrix(dimension: usize) -> Array2<f64> {
-        let mut rng = thread_rng();
-        let mut matrix: Array2<f64> = Array2::zeros((dimension,dimension));
-        matrix.map_inplace(|e| {*e = rng.gen_range(0..1000) as f64/(rng.gen_range(1..100) as f64)});
-        matrix
+    fn generate_random_basis(dimension: usize) -> Vec<Array1<f64>> {
+        let mut basis: Vec<Array1<f64>> = Vec::with_capacity(dimension);
+        for _ in 0..dimension {
+            basis.push(generate_random_vector(dimension));
+        }
+        basis
     }
 
     fn generate_random_vector(dimension: usize) -> Array1<f64> {
@@ -216,47 +224,41 @@ mod lattice_tests {
     #[test]
     fn test_lattice_building() {
         let vectors = vec![array![1.,2.,3.], array![4.,5.,6.], array![7.,8.,9.]];
-        let basis = array![
-            [1.,4.,7.],
-            [2.,5.,8.],
-            [3.,6.,9.]
-        ];
 
-        let m1 = Lattice::build_from_basis(&basis);
-        let m2 = Lattice::build_lattice_basis_from_vectors(&vectors).unwrap();
+        let lattice = Lattice::build_lattice_basis_from_vectors(&vectors).unwrap();
         let shortest_vector = array![1.,2.,3.];
 
-        assert_eq!(m1.basis, m2.basis);
-        assert_eq!(m1.get_shortest_basis_vector(), shortest_vector.view());
+        assert_eq!(lattice.get_shortest_basis_vector().unwrap(), shortest_vector.view());
     }
 
     #[test]
     fn test_simple_lattice_operations() {
         let mut rng = thread_rng();
         let dimension = rng.gen_range(2..14);
-        let basis = generate_random_matrix(dimension);
-        let lattice = Lattice::build_from_basis(&basis);
+        let basis = generate_random_basis(dimension);
+        let lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
 
         let index = rng.gen_range(0..dimension);
-        let column = lattice.get_basis_vector(index);
-        let correct_column = basis.column(index);
+        let column = lattice.get_basis_vector(index).unwrap();
+        let correct_column = basis.get(index).unwrap();
 
         assert_eq!(column, correct_column);
         assert_eq!(lattice.get_length_of_basis_vectors(), dimension);
         assert_eq!(lattice.columns(), dimension);
-
     }
 
     #[test]
     fn test_gram_schmidt() {
         let dimension = 100;
         let tol = 1e-9;
-        let matrix = generate_random_matrix(dimension);
-        let b = gram_schmidt_columns(&matrix);
+        let basis = generate_random_basis(dimension);
+        let b = gram_schmidt(&basis);
         
         for i in 0..7 {
+            let b_i = b.get(i).unwrap();
             for j in i+1..7 {
-                let ip = b.column(i).dot(&b.column(j));
+                let b_j = b.get(j).unwrap();
+                let ip = b_i.dot(b_j);
                 assert!(ip.abs() < tol, "ip = {}, between index {}, and {}", ip, i, j);
             }
         }
@@ -266,9 +268,9 @@ mod lattice_tests {
     #[allow(unused_must_use)]
     fn problem_solvers_runs_without_crashing() {
         let dimension = 15;
-        let matrix = generate_random_matrix(dimension);
+        let basis = generate_random_basis(dimension);
         let vector = generate_random_vector(dimension);
-        let lattice = Lattice::build_from_basis(&matrix);
+        let lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
 
         lattice.shortest_vector_by_enumeration();
         lattice.babai_nearest_plane(&vector);
