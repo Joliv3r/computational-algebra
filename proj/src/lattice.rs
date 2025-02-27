@@ -2,7 +2,7 @@ extern crate openblas_src;
 
 use itertools::Itertools;
 use methods::gram_schmidt;
-use ndarray::{Array1, Axis, Slice};
+use ndarray::Array1;
 
 pub mod methods;
 

@@ -1,8 +1,8 @@
 use itertools::Itertools;
-use ndarray::{Array1, Array2, Slice};
+use ndarray::{Array1, Array2};
 
 use super::Lattice;
-pub mod babai_nearest_plane;
+pub mod closest_vector;
 pub mod shortest_vector;
 pub mod basis_reduction;
 
@@ -81,8 +81,6 @@ impl Lattice {
 
 #[cfg(test)]
 mod lattice_tests {
-    use std::array;
-
     use rand::{thread_rng, Rng};
     use ndarray::array;
 
@@ -118,6 +116,7 @@ mod lattice_tests {
     }
 
     #[test]
+    #[allow(unused_must_use)]
     fn test_lattice_building() {
         let vectors = vec![array![1.,2.,3.], array![4.,5.,6.], array![7.,8.,9.]];
 
