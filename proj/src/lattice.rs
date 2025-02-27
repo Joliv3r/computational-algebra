@@ -1,6 +1,7 @@
 extern crate openblas_src;
 
 use itertools::Itertools;
+use methods::gram_schmidt;
 use ndarray::{Array1, Axis, Slice};
 
 pub mod methods;
@@ -25,6 +26,18 @@ impl Lattice {
         }
     }
 
+    pub fn print_basis(&self) {
+        for i in &self.basis {
+            println!("{}", i);
+        }
+    }
+
+    pub fn print_gram_schmidt_basis(&self) {
+        for i in &self.gram_schmidt_basis {
+            println!("{}", i);
+        }
+    }
+
     pub fn get_basis_columns(&self, start: usize, end: usize) -> Option<Vec<Array1<f64>>> {
         // self.basis.slice_axis(Axis(1), slice)
         if self.columns() < end {
@@ -36,10 +49,17 @@ impl Lattice {
     // Should only be called if Gram-Schmidt basis is already calculated
     pub fn get_gram_schmidt_basis_columns(&self, start: usize, end: usize) -> Option<Vec<Array1<f64>>> {
         // self.gram_schmidt_basis.slice_axis(Axis(1), slice)
-        if self.columns() < end {
+        if !self.index_exists(end-1) {
             return None
         }
         Some(self.gram_schmidt_basis[start..end].to_vec())
+    }
+
+    fn index_exists(&self, index: usize) -> bool {
+        if index >= self.columns() {
+            return false
+        }
+        true
     }
 
     pub fn get_length_of_basis_vectors(&self) -> usize {
@@ -71,5 +91,28 @@ impl Lattice {
             }
         }
         Some(shortest_basis_vector)
+    }
+
+    pub fn update_basis_vector(&mut self, index: usize, new_vector: &Array1<f64>) -> Result<(), String> {
+        if !self.index_exists(index) {
+            return Err("Index out of range.".to_string())
+        }
+
+        self.basis[index] = new_vector.clone();
+        Ok(())
+    }
+
+    // TODO: Take indexes and update only these to make fewer unnecessary compuations.
+    fn update_gram_schmidt_basis(&mut self) {
+        self.gram_schmidt_basis = gram_schmidt(&self.basis);
+    }
+
+    pub fn swap_basis_vectors(&mut self, i: usize, j: usize) -> Result<(), String> {
+        if !self.index_exists(i) || !self.index_exists(j) {
+            return Err("Index out of range".to_string())
+        }
+        self.basis.swap(i, j);
+        self.update_gram_schmidt_basis();
+        Ok(())
     }
 }

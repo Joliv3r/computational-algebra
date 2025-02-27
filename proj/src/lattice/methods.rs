@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use ndarray::{Array1, Array2, Slice};
+use std::cmp::max;
 
 use super::Lattice;
 
@@ -149,16 +150,16 @@ impl Lattice {
     fn get_enumeration_bounds(&self, combination: &Vec<i32>, basis_number: usize, A: f64) -> (i32, i32) {
         let mut sum: f64 = 0.;
         let mut M_2: f64 = 0.;
-        let start = self.columns()-basis_number-1;
+        let start = self.columns()-basis_number+1;
         let end = self.columns();
-        let b_i = self.get_basis_vector(self.columns()-basis_number).expect("Function is called only if this vector exists.");
-        for (x_j, b_orth_j) in combination.iter().zip(self.get_gram_schmidt_basis_columns(start, end).expect("Should exist.").into_iter().rev()) {
-            let B_j = b_orth_j.dot(&b_orth_j);
-            let mu_ij = b_i.dot(&b_orth_j)/b_orth_j.dot(&b_orth_j);
+        let i = self.columns()-basis_number;
+        for (x_j, j) in combination.iter().zip((start..end).into_iter().rev()) {
+            let B_j = self.get_gram_schmidt_length(j);
+            let mu_ij = self.get_mu(i, j);
             sum += (x_j.pow(2) as f64)*B_j;
             M_2 += mu_ij*(*x_j as f64);
         }
-        let M_1 = ((A-sum)/b_i.dot(&b_i)).sqrt();
+        let M_1 = ((A-sum)/self.get_gram_schmidt_length(i)).sqrt();
 
         (-(M_1+M_2).ceil() as i32, (M_1-M_2).floor() as i32)
     }
@@ -170,23 +171,52 @@ impl Lattice {
         todo!()
     }
 
-    // This procedure is directly copied from Wikipedia, 
-    //   https://en.wikipedia.org/wiki/Lenstra%E2%80%93Lenstra%E2%80%93Lov%C3%A1sz_lattice_basis_reduction_algorithm#LLL_algorithm_pseudocode
-    pub fn lll_reduction(&mut self, parameter: f64) {
+    // Calculates mu_kj = <b_k, b*_j>/<b*_j, b*_j>
+    fn get_mu(&self, k: usize, j: usize) -> f64 {
+        let b_k = self.get_basis_vector(k).expect("Should exist.");
+        let b_orth_j = self.get_gram_schmidt_basis_vector(j).expect("Should exist.");
+        b_k.dot(&b_orth_j)/(b_orth_j.dot(&b_orth_j))
+    }
+
+    fn get_gram_schmidt_length(&self, index: usize) -> f64 {
+        let b = self.get_gram_schmidt_basis_vector(index).expect("Should exist");
+        b.dot(&b)
+    }
+
+    // This procedure is directly copied from Galbraith
+    //   https://www.math.auckland.ac.nz/~sgal018/crypto-book/ch17.pdf
+    pub fn lll_reduction(&mut self, delta: f64) -> Result<(), String> {
+        if delta >= 1. || delta <= 0.25 {
+            return Err("Given delta is out of the allowed range (1/4, 1)".to_string())
+        }
         let mut k = 2;
-        while k <= self.columns() {
-            for j in (0..k).rev() {
-                // let b_orth_j = self.get_gram_schmidt_basis_vector(j);
-                // let mu_kj = self.get_basis_vector(k).dot(&b_orth_j)/(b_orth_j.dot(&b_orth_j));
+        while k < self.columns() {
+            let b_k = self.get_basis_vector(k).expect("Should exist.");
+            for j in (0..k-1).rev() {
+                let b_j = self.get_basis_vector(j).expect("Should exist.");
+                let mu_kj = self.get_mu(k, j);
+                if let Err(e) = self.update_basis_vector(k, &(&b_k - b_j*(mu_kj.round() as f64))) {
+                    return Err(e)
+                }
+            }
+            if self.get_gram_schmidt_length(k) >= delta - self.get_mu(k, k-1).powi(2)*self.get_gram_schmidt_length(k-1) {
+                k += 1;
+            } else {
+                if let Err(e) = self.swap_basis_vectors(k, k-1) {
+                    return Err(e)
+                }
+                k = max(2, k-1);
             }
         }
-        todo!()
+        Ok(())
     }
 }
 
 
 #[cfg(test)]
 mod lattice_tests {
+    use std::array;
+
     use rand::{thread_rng, Rng};
     use ndarray::array;
 
@@ -225,10 +255,23 @@ mod lattice_tests {
     fn test_lattice_building() {
         let vectors = vec![array![1.,2.,3.], array![4.,5.,6.], array![7.,8.,9.]];
 
-        let lattice = Lattice::build_lattice_basis_from_vectors(&vectors).unwrap();
+        let mut lattice = Lattice::build_lattice_basis_from_vectors(&vectors).unwrap();
         let shortest_vector = array![1.,2.,3.];
 
         assert_eq!(lattice.get_shortest_basis_vector().unwrap(), shortest_vector.view());
+
+        let new_vectors = vec![
+            array![7.,8.,9.],
+            array![4.,5.,6.]
+        ];
+
+        
+        
+        lattice.swap_basis_vectors(1, 2);
+        assert_eq!(lattice.get_basis_columns(1, 3).unwrap(), new_vectors);
+
+        lattice.update_basis_vector(2, &shortest_vector);
+        assert_eq!(lattice.get_basis_vector(2).unwrap(), shortest_vector);
     }
 
     #[test]
@@ -245,6 +288,8 @@ mod lattice_tests {
         assert_eq!(column, correct_column);
         assert_eq!(lattice.get_length_of_basis_vectors(), dimension);
         assert_eq!(lattice.columns(), dimension);
+        assert!(lattice.index_exists(dimension-1));
+        assert!(!lattice.index_exists(dimension));
     }
 
     #[test]
@@ -267,10 +312,13 @@ mod lattice_tests {
     #[test]
     #[allow(unused_must_use)]
     fn problem_solvers_runs_without_crashing() {
-        let dimension = 15;
+        let dimension = 10;
         let basis = generate_random_basis(dimension);
         let vector = generate_random_vector(dimension);
-        let lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
+        let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
+
+        let delta = 0.75;
+        lattice.lll_reduction(delta);
 
         lattice.shortest_vector_by_enumeration();
         lattice.babai_nearest_plane(&vector);
