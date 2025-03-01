@@ -45,7 +45,6 @@ impl Lattice {
         let mut checked_points = vec![(closest_vector[0], closest_vector[1])];
 
         let (lower_bound, upper_bound) = self.get_cvp_enumeration_bounds(&Vec::<i64>::new(), 0, shortest_distance, &y);
-        println!("Checking in {}..{}", lower_bound, upper_bound);
 
         for x_n in lower_bound..=upper_bound {
             let combination = vec![x_n];
@@ -62,7 +61,6 @@ impl Lattice {
     fn closest_vector_enumeration_step(&self, vector: &Array1<f64>, depth: usize, combination: &Vec<i64>, current_closest_vector: &Array1<f64>, current_shortest_distance: f64, y: &Array1<f64>, checked_points: &mut Vec<(f64, f64)>) -> (Array1<f64>, f64) {
         if depth == self.columns() {
             let indexes = &combination.iter().rev().cloned().collect_vec();
-            println!("We have indexes {:?}", indexes);
             let current_vector = self.get_lattice_point(indexes).expect("Should exist.");
             let current_distance = get_length_of_vector(&(vector-&current_vector));
             // println!("Found current distance: {}, with {}", current_distance, current_vector);
@@ -105,7 +103,7 @@ impl Lattice {
             sum += ((self.get_gram_schmidt_coefficient(&combination) - y.get(j).expect("Should exist.")).powf(2.) as f64)*B_j;
             N_i += mu_ji * (*x_j as f64);
         }
-        let M_i = ((A - sum).abs()/self.get_gram_schmidt_length(i)).sqrt();
+        let M_i = ((A - sum)/self.get_gram_schmidt_length(i)).sqrt();
         let y_i = y.get(i).expect("Should exist.");
         // println!("We have y_i = {}", y_i);
 
@@ -122,7 +120,7 @@ impl Lattice {
         // let comb = combination.iter().copied().chain(vec![0; num_of_zeros].iter().copied()).rev().collect();
         // let vector = self.get_lattice_point(&comb).expect("Combination should be valid.");
 
-        let i = self.columns() - combination.len() - 1;
+        let i = self.columns() - combination.len();
         let mut z_i = 0.;
         for (j, x_j) in combination.iter().enumerate() {
             if j == combination.len()-1 {

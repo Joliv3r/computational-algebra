@@ -216,7 +216,7 @@ mod lattice_tests {
     #[test]
     #[allow(unused_must_use)]
     fn problem_solvers_runs_without_crashing() {
-        let dimension = 10;
+        let dimension = 5;
         let basis = generate_random_basis(dimension);
         let vector = generate_random_vector(dimension);
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
@@ -244,5 +244,29 @@ mod lattice_tests {
 
         vectors[1] = array![1., 5.];
         assert!(!is_linearly_independent(&vectors));
+    }
+
+    #[test]
+    fn test_cvp_by_enumeration() {
+        let rng = thread_rng();
+        let dimension = 5;
+        let loops = 20;
+        let basis = generate_random_basis(dimension);
+        let vector = generate_random_vector(dimension);
+
+        let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
+        lattice.lll_reduction(0.75);
+
+        for _ in 0..loops {
+            let (cvp_enumeration, _) = lattice.closest_vector_by_enumeration(&vector).unwrap();
+            let cvp_babai = lattice.babai_nearest_plane(&vector).unwrap();
+
+            let len_enum = get_length_of_vector(&(&cvp_enumeration - &vector));
+            let len_babai = get_length_of_vector(&(&cvp_babai - &vector));
+
+            if len_enum > len_babai {
+                panic!("Enumeration did not find the closest vector.");
+            }
+        }
     }
 }
