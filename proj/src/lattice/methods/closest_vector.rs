@@ -44,7 +44,7 @@ impl Lattice {
 
         let mut checked_points = vec![(closest_vector[0], closest_vector[1])];
 
-        let (lower_bound, upper_bound) = self.get_cvp_enumeration_bounds(&Vec::<i64>::new(), 1, shortest_distance, &y);
+        let (lower_bound, upper_bound) = self.get_cvp_enumeration_bounds(&Vec::<i64>::new(), 0, shortest_distance, &y);
         println!("Checking in {}..{}", lower_bound, upper_bound);
 
         for x_n in lower_bound..=upper_bound {
