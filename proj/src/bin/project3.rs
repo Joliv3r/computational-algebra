@@ -1,11 +1,16 @@
 #![allow(unused_imports)]
 use beralg::lattice::methods::get_length_of_vector;
+use beralg::lattice::methods::timing::babai_times;
+use beralg::lattice::methods::timing::check_closest_vector_by_enumeration_limit;
 use beralg::lattice::methods::timing::cvp_statistics;
+use beralg::lattice::methods::timing::increase_basis;
+use beralg::lattice::methods::timing::enumeration_times;
 use beralg::lattice::Lattice;
 use itertools::Itertools;
 use ndarray::array;
 use ndarray::Array2;
 use ndarray_linalg::Solve;
+use rand::thread_rng;
 
 fn main() {
     // let basis = vec![
@@ -53,6 +58,32 @@ fn main() {
     // let plot_size = 100;
     // lattice.print_lattice_around_point(point, plot_size, size, &checked_points);
 
-    let top = 10;
-    cvp_statistics(top);
+    // let basis = vec![
+    //     array![1., 4., 0.],
+    //     array![0., 2., 0.],
+    //     array![0., 15., 3.],
+    // ];
+    //
+    // let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
+    // lattice.print_gram_schmidt_basis();
+    //
+    // if let Err(e) = lattice.lll_reduction(0.75) {
+    //     println!("{}", e);
+    // }
+    // lattice.print_basis();
+    // lattice.print_gram_schmidt_basis();
+
+    // for i in (0..5).rev() {
+    //     println!("{}", i);
+    // }
+
+
+    // let top = 20;
+    // cvp_statistics(top);
+
+    let top = 100;
+    babai_times(top);
+
+   // check_closest_vector_by_enumeration_limit(); 
+
 }
