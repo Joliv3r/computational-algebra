@@ -199,7 +199,7 @@ mod lattice_tests {
     fn problem_solvers_runs_without_crashing() {
         let dimension = 5;
         let basis = generate_random_basis(dimension);
-        let vector = generate_random_vector(dimension);
+        let vector = generate_random_vector(dimension, 1.);
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
 
         let delta = 0.75;
@@ -233,13 +233,13 @@ mod lattice_tests {
         let dimension = 15;
         let loops = 20;
         let basis = generate_random_basis(dimension);
-        let vector = generate_random_vector(dimension);
+        let vector = generate_random_vector(dimension, 1.);
 
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
         lattice.lll_reduction(0.75);
 
         for _ in 0..loops {
-            let (cvp_enumeration, _) = lattice.closest_vector_by_enumeration(&vector).unwrap();
+            let cvp_enumeration = lattice.closest_vector_by_enumeration(&vector).unwrap();
             let cvp_babai = lattice.babai_nearest_plane(&vector).unwrap();
 
             let len_enum = get_length_of_vector(&(&cvp_enumeration - &vector));

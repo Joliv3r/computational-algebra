@@ -116,6 +116,7 @@ impl Lattice {
         }
 
         self.basis[index] = new_vector.clone();
+        self.update_gram_schmidt_basis();
         Ok(())
     }
 
