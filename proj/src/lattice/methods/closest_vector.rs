@@ -38,7 +38,6 @@ impl Lattice {
         }
 
         let y = self.write_vector_with_gram_schmidt_vectors(vector);
-        println!("We have writting vector as {}", y);
         let mut closest_vector = self.get_basis_vector(0).expect("Should exist.");
         let mut shortest_distance = get_length_of_vector(&(vector-&closest_vector));
 
@@ -89,7 +88,6 @@ impl Lattice {
 
     #[allow(non_snake_case)]
     fn get_cvp_enumeration_bounds(&self, combination: &Vec<i64>, basis_number: usize, A: f64, y: &Array1<f64>) -> (i64, i64) {
-        println!("Checking bounds with following information: {:?}, {}, {}", combination, basis_number, A);
         let mut sum = 0.;
         let mut N_i = 0.;
         let start = self.columns()-basis_number;

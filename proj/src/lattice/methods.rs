@@ -8,6 +8,7 @@ use super::Lattice;
 pub mod closest_vector;
 pub mod shortest_vector;
 pub mod basis_reduction;
+pub mod timing;
 
 // We expect this function to be called only with vectors of the same size.
 pub fn make_matrix_from_column_vectors(vectors: &Vec<Array1<f64>>) -> Array2<f64> {
@@ -116,27 +117,7 @@ mod lattice_tests {
     use ndarray::array;
 
     use super::*;
-
-    fn generate_random_basis(dimension: usize) -> Vec<Array1<f64>> {
-        let mut basis: Vec<Array1<f64>> = Vec::with_capacity(dimension);
-        for _ in 0..dimension {
-            basis.push(generate_random_vector(dimension));
-        }
-
-        while !is_linearly_independent(&basis) {
-            for i in 0..dimension {
-                basis[i] = generate_random_vector(dimension);
-            }
-        }
-        basis
-    }
-
-    fn generate_random_vector(dimension: usize) -> Array1<f64> {
-        let mut rng = thread_rng();
-        let mut vector: Array1<f64> = Array1::zeros(dimension);
-        vector.map_inplace(|e| {*e = rng.gen_range(0..1000) as f64/(rng.gen_range(1..100) as f64)});
-        vector
-    }
+    use super::timing::{generate_random_basis, generate_random_vector};
 
     #[test]
     fn test_matrix_from_column_vectors() {
@@ -249,7 +230,7 @@ mod lattice_tests {
     #[test]
     fn test_cvp_by_enumeration() {
         let rng = thread_rng();
-        let dimension = 5;
+        let dimension = 15;
         let loops = 20;
         let basis = generate_random_basis(dimension);
         let vector = generate_random_vector(dimension);

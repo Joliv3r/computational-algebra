@@ -20,7 +20,6 @@ impl Lattice {
         let mut combination = vec![0; self.columns()];
         let bound_n = (shortest_length/self.get_gram_schmidt_length(self.columns()-1)).sqrt().floor() as i64;
 
-        println!("Bound on n is {}", bound_n);
 
         for x_n in 0..bound_n {
             combination[self.columns()-1] = x_n;
@@ -38,7 +37,6 @@ impl Lattice {
         if depth == self.columns() {
             let current_vector = self.get_lattice_point(combination).expect("Should exist.");
             let current_length = current_vector.dot(&current_vector);
-            println!("Depth reached.");
             checked_points.push((current_vector[0], current_vector[1]));
             return (current_vector, current_length)
         }
@@ -46,14 +44,12 @@ impl Lattice {
         let mut shortest_vector = current_shortes_vector.clone();
         let mut shortest_length = current_shortest_length;
         let (lower_bound, upper_bound) = self.get_svp_enumeration_bounds(combination, depth, shortest_length);
-        println!("Checking in {}..{}", lower_bound, upper_bound);
         for i in lower_bound..=upper_bound {
             combination[self.columns()-1-depth] = i;
             let (candidate_vector, candidate_length) = self.shortest_vector_enumeration_steps(depth+1, combination, &shortest_vector, shortest_length, checked_points);
             if candidate_length < shortest_length && candidate_length != 0. {
                 shortest_vector = candidate_vector;
                 shortest_length = candidate_length;
-                println!("New shortest distance found: {}, with {}", shortest_length, shortest_vector);
             }
         }
 
