@@ -32,7 +32,7 @@ impl Lattice {
         Ok(y)
     }
 
-    pub fn closest_vector_by_enumeration(&self, vector: &Array1<f64>) -> Result<(Array1<f64>, Vec<(f64, f64)>), String> {
+    pub fn closest_vector_by_enumeration(&self, vector: &Array1<f64>) -> Result<Array1<f64>, String> {
         if self.columns() == 0 {
             return Err("Lattice is empty.".to_string())
         }
@@ -41,29 +41,26 @@ impl Lattice {
         let mut closest_vector = self.get_basis_vector(0).expect("Should exist.");
         let mut shortest_distance = get_length_of_vector(&(vector-&closest_vector));
 
-        let mut checked_points = vec![(closest_vector[0], closest_vector[1])];
-
         let mut combination = vec![0; self.columns()];
         let (lower_bound, upper_bound) = self.get_cvp_enumeration_bounds(&combination, 0, shortest_distance, &y);
 
         for x_n in lower_bound..=upper_bound {
             combination[self.columns()-1] = x_n;
-            let (candidate_vector, candidate_distance) = self.closest_vector_enumeration_step(vector, 1, &mut combination, &closest_vector, shortest_distance, &y, &mut checked_points);
+            let (candidate_vector, candidate_distance) = self.closest_vector_enumeration_step(vector, 1, &mut combination, &closest_vector, shortest_distance, &y);
             if candidate_distance < shortest_distance {
                 closest_vector = candidate_vector;
                 shortest_distance = candidate_distance;
             }
         }
 
-        Ok((closest_vector, checked_points))
+        Ok(closest_vector)
     }
 
-    fn closest_vector_enumeration_step(&self, vector: &Array1<f64>, depth: usize, combination: &mut Vec<i64>, current_closest_vector: &Array1<f64>, current_shortest_distance: f64, y: &Array1<f64>, checked_points: &mut Vec<(f64, f64)>) -> (Array1<f64>, f64) {
+    fn closest_vector_enumeration_step(&self, vector: &Array1<f64>, depth: usize, combination: &mut Vec<i64>, current_closest_vector: &Array1<f64>, current_shortest_distance: f64, y: &Array1<f64>) -> (Array1<f64>, f64) {
         if depth == self.columns() {
             let current_vector = self.get_lattice_point(combination).expect("Should exist.");
             let current_distance = get_length_of_vector(&(vector-&current_vector));
             // println!("Found current distance: {}, with {}", current_distance, current_vector);
-            checked_points.push((current_vector[0], current_vector[1]));
             return (current_vector, current_distance)
         }
         
@@ -75,7 +72,7 @@ impl Lattice {
             // let mut new_combination = combination.clone();
             // new_combination.push(i);
             combination[self.columns()-1-depth] = i;
-            let (candidate_vector, candidate_distance) = self.closest_vector_enumeration_step(vector, depth+1, combination, &closest_vector, shortest_distance, y, checked_points);
+            let (candidate_vector, candidate_distance) = self.closest_vector_enumeration_step(vector, depth+1, combination, &closest_vector, shortest_distance, y);
             if candidate_distance < shortest_distance {
                 closest_vector = candidate_vector;
                 shortest_distance = candidate_distance;

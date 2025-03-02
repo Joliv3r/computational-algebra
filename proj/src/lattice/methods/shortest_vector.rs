@@ -9,13 +9,12 @@ impl Lattice {
     //   M_1 = sqrt{ ( A - sum_{j = i+1}^{n} x_j^2 B_j )/B_i }
     //   M_2 = sum_{j = i+1}^{n} µ_{j,i} x_j
     // with A > ||v||^2 and B_j = ||b_j||^2 and µ_{j,i} = <b_i, b*_j>/||b*_j||^2.
-    pub fn shortest_vector_by_enumeration(&self) -> Result<(Array1<f64>, Vec<(f64, f64)>), String> {
+    pub fn shortest_vector_by_enumeration(&self) -> Result<Array1<f64>, String> {
         if self.columns() == 0 {
             return Err("Lattice is empty.".to_string())
         }
         let mut shortest_vector: Array1<f64> = self.get_basis_vector(self.columns()-1).expect("Should exist.").to_vec().into();
         let mut shortest_length = shortest_vector.dot(&shortest_vector);
-        let mut checked_points: Vec<(f64, f64)> = vec![(shortest_vector[0], shortest_vector[1])];
 
         let mut combination = vec![0; self.columns()];
         let bound_n = (shortest_length/self.get_gram_schmidt_length(self.columns()-1)).sqrt().floor() as i64;
@@ -23,21 +22,20 @@ impl Lattice {
 
         for x_n in 0..bound_n {
             combination[self.columns()-1] = x_n;
-            let (candidate_vector, candidate_length) = self.shortest_vector_enumeration_steps(1, &mut combination, &shortest_vector.to_vec().into(), shortest_length, &mut checked_points);
+            let (candidate_vector, candidate_length) = self.shortest_vector_enumeration_steps(1, &mut combination, &shortest_vector.to_vec().into(), shortest_length);
             if candidate_length < shortest_length && candidate_length != 0. {
                 shortest_vector = candidate_vector;
                 shortest_length = candidate_length;
             }
         }
 
-        Ok((shortest_vector, checked_points))
+        Ok(shortest_vector)
     }
 
-    fn shortest_vector_enumeration_steps(&self, depth: usize, combination: &mut Vec<i64>, current_shortes_vector: &Array1<f64>, current_shortest_length: f64, checked_points: &mut Vec<(f64, f64)>) -> (Array1<f64>, f64) {
+    fn shortest_vector_enumeration_steps(&self, depth: usize, combination: &mut Vec<i64>, current_shortes_vector: &Array1<f64>, current_shortest_length: f64) -> (Array1<f64>, f64) {
         if depth == self.columns() {
             let current_vector = self.get_lattice_point(combination).expect("Should exist.");
             let current_length = current_vector.dot(&current_vector);
-            checked_points.push((current_vector[0], current_vector[1]));
             return (current_vector, current_length)
         }
 
@@ -46,7 +44,7 @@ impl Lattice {
         let (lower_bound, upper_bound) = self.get_svp_enumeration_bounds(combination, depth, shortest_length);
         for i in lower_bound..=upper_bound {
             combination[self.columns()-1-depth] = i;
-            let (candidate_vector, candidate_length) = self.shortest_vector_enumeration_steps(depth+1, combination, &shortest_vector, shortest_length, checked_points);
+            let (candidate_vector, candidate_length) = self.shortest_vector_enumeration_steps(depth+1, combination, &shortest_vector, shortest_length);
             if candidate_length < shortest_length && candidate_length != 0. {
                 shortest_vector = candidate_vector;
                 shortest_length = candidate_length;
