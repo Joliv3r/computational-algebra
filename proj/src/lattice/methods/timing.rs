@@ -180,7 +180,7 @@ pub fn enumeration_times_with_lll(top: usize) {
 
         let now = Instant::now();
         for _ in 0..loop_num {
-            lattice.shortest_vector_by_enumeration();
+            lattice.closest_vector_by_enumeration(&vector);
         }
         let elapsed = (now.elapsed()/loop_num as u32).as_micros() as u64;
         if elapsed > max_y {
@@ -206,7 +206,7 @@ pub fn enumeration_times_with_lll(top: usize) {
 
     let times = vec![(times_pre_lll, "Before LLL-reduction"), (times_post_lll, "After LLL-reduction")];
 
-    plot_time(times, "Timing of Closest Vector Problem based on LLL-reduction", max_y, top as u64, "cvp-lll", "Microseconds");
+    plot_time(times, "Timing of Closest Vector Problem based on LLL-reduction", max_y, top as u64, "cvp-lll", "Seconds");
 }
 
 
@@ -239,7 +239,7 @@ fn plot_time(times: Vec<(Vec<(u64, u64)>, &str)>, caption: &str, max_y: u64, max
         .x_desc("Dimension of lattice")
         .x_label_style(("computer-modern", 24).into_font())
         .y_desc(y_label)
-        .y_label_formatter(&|y| format!("{}", y/100000 as u64))
+        .y_label_formatter(&|y| format!("{}", y/1000000 as u64))
         .y_label_style(("computer-modern", 24).into_font())
         .draw()?;
 
