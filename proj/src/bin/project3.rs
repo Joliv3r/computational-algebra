@@ -1,10 +1,11 @@
 #![allow(unused_imports)]
 use beralg::lattice::methods::get_length_of_vector;
-use beralg::lattice::methods::timing::babai_times;
 use beralg::lattice::methods::timing::check_closest_vector_by_enumeration_limit;
 use beralg::lattice::methods::timing::cvp_statistics;
+use beralg::lattice::methods::timing::enumeration_times_with_lll;
 use beralg::lattice::methods::timing::increase_basis;
-use beralg::lattice::methods::timing::enumeration_times;
+use beralg::lattice::methods::timing::plot_distance_diffs;
+use beralg::lattice::methods::timing::plot_shortest_vector;
 use beralg::lattice::Lattice;
 use itertools::Itertools;
 use ndarray::array;
@@ -13,76 +14,19 @@ use ndarray_linalg::Solve;
 use rand::thread_rng;
 
 fn main() {
-    // let basis = vec![
-    //     array![329.,234.,643.,],
-    //     array![5., 7., 2.,],
-    //     array![164., 117., 321.,],
-    // ];
-    //
-    // let lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
-    //
-    // if let Ok(shortest_vector) = lattice.shortest_vector_by_enumeration() {
-    //     println!("{}", shortest_vector);
-    // }
-    // let basis = vec![
-    //     array![232., -12.2],
-    //     array![-134., 11.1],
-    // ];
-    // let basis = vec![
-    //     array![1., 1., 0.,],
-    //     array![0., 1., 0.,],
-    //     array![0., 0., 1.,]
-    // ];
-    //
-    // let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
-    // lattice.lll_reduction(0.75);
-    // lattice.print_basis();
-    // lattice.print_gram_schmidt_basis();
-    // let a = array![-342.01, 2134.12];
-    //
-    // let (cvp, checked_points) = lattice.closest_vector_by_enumeration(&a).unwrap();
-    // let babai = lattice.babai_nearest_plane(&a).unwrap();
-    // let (cvp, checked_points) = lattice.shortest_vector_by_enumeration().unwrap();
-    // println!("{:#?}", checked_points);
-    // println!("{}", cvp);
-    // println!("{}", babai);
-    // let cvp_dist = get_length_of_vector(&(&a - &cvp));
-    // let babai_dist = get_length_of_vector(&(&a - &babai));
-    // println!("{}", cvp_dist);
-    // println!("{}", babai_dist);
-    // let combination = vec![6];
-    // let current_vector = lattice.write_vector_with_gram_schmidt_vectors_from_reversed_basis_representation(&combination);
-    // 
-    // let point = (a[0], a[1]);
-    // let size = 100;
-    // let plot_size = 100;
-    // lattice.print_lattice_around_point(point, plot_size, size, &checked_points);
-
-    // let basis = vec![
-    //     array![1., 4., 0.],
-    //     array![0., 2., 0.],
-    //     array![0., 15., 3.],
-    // ];
-    //
-    // let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).unwrap();
-    // lattice.print_gram_schmidt_basis();
-    //
-    // if let Err(e) = lattice.lll_reduction(0.75) {
-    //     println!("{}", e);
-    // }
-    // lattice.print_basis();
-    // lattice.print_gram_schmidt_basis();
-
-    // for i in (0..5).rev() {
-    //     println!("{}", i);
-    // }
-
-
     // let top = 20;
     // cvp_statistics(top);
 
-    let top = 100;
-    babai_times(top);
+    // let top = 50;
+    // babai_times(top);
+
+    let start = 2;
+    let end = 17;
+    plot_distance_diffs(start, end);
+    let end = 25;
+    plot_shortest_vector(start, end);
+    let end = 19;
+    enumeration_times_with_lll(end);
 
    // check_closest_vector_by_enumeration_limit(); 
 
