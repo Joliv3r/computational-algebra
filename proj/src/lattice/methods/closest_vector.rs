@@ -1,6 +1,5 @@
-use crate::lattice::{methods::closest_vector, Lattice};
-use itertools::Itertools;
-use ndarray::{Array, Array1, ArrayBase};
+use crate::lattice::Lattice;
+use ndarray::Array1;
 
 use super::get_length_of_vector;
 

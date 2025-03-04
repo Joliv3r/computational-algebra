@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use itertools::Itertools;
 use ndarray::{Array1, Array2};
 use ndarray_linalg::Solve;

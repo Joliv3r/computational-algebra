@@ -1,13 +1,10 @@
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
-use plotters::{coord::combinators::IntoLogRange, style::full_palette::{BLUE, GREEN, ORANGE}};
-use itertools::{max, min};
+use plotters::style::full_palette::{BLUE, GREEN, ORANGE};
 use plotters::prelude::*;
 use ndarray::{array, Array1, Axis};
-use ndarray_linalg::generate;
 use rand::{thread_rng, Rng};
-use rug::az::CastFrom;
-use crate::lattice::{methods::{get_length_of_vector, shortest_vector}, Lattice};
+use crate::lattice::{methods::get_length_of_vector, Lattice};
 
 use super::is_linearly_independent;
 
@@ -88,9 +85,11 @@ pub fn plot_shortest_vector(start: usize, end: usize) {
     let mut length = Vec::with_capacity(end-start);
 
     let mut basis = generate_random_basis(start);
-    let mut max_y = 0;
+    let mut max_y = 0 as u64;
+    let min_x = (start-1) as u64;
+    let max_x = end as u64;
 
-    for dimension in 2..end {
+    for dimension in start..end {
         let vector = generate_random_vector(dimension, 20.);
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).expect("Should be a square matrix.");
 
@@ -115,7 +114,7 @@ pub fn plot_shortest_vector(start: usize, end: usize) {
         (length, "Shortest basis vector after LLL-reduction"),
     ];
 
-    plot_time(times, "Length of shortest vector", max_y, end as u64, "svp-length", "Length");
+    plot_time(times, "Length of shortest vector", (min_x, max_x, 1 as u64, max_y), "svp-length", "Length");
 }
 
 pub fn plot_distance_diffs(start: usize, end: usize) {
@@ -123,9 +122,11 @@ pub fn plot_distance_diffs(start: usize, end: usize) {
     let mut dist_babai_post_lll = Vec::with_capacity(end-start);
     let mut dist_cvp_enum = Vec::with_capacity(end-start);
     let mut basis = generate_random_basis(start);
-    let mut max_y = 0;
+    let mut max_y = 0 as u64;
+    let max_x = end as u64;
+    let min_x = (start-1) as u64;
 
-    for dimension in 2..end {
+    for dimension in start..end {
         let vector = generate_random_vector(dimension, 20.);
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).expect("Should be a square matrix.");
 
@@ -153,24 +154,28 @@ pub fn plot_distance_diffs(start: usize, end: usize) {
     }
 
     let times = vec![
-        (dist_babai_pre_lll, "Before LLL-reduction"),
-        (dist_babai_post_lll, "After LLL-reduction"),
+        (dist_babai_pre_lll, "Babai before LLL-reduction"),
+        (dist_babai_post_lll, "Babai after LLL-reduction"),
         (dist_cvp_enum, "Closest vector"),
     ];
 
-    plot_time(times, "Closest Vector Problem with different methods", max_y, end as u64, "cvp-distance", "Distance");
+    plot_time(times, "Closest Vector Problem with different methods", (min_x, max_x, 1, max_y), "cvp-distance", "Distance");
 }
 
 
-pub fn enumeration_times_with_lll(top: usize) {
-    let mut times_pre_lll = Vec::with_capacity(top-2);
-    let mut times_post_lll = Vec::with_capacity(top-2);
-    let mut basis = generate_random_basis(2);
-    let mut max_y = 0;
-    for dimension in 2..top {
+pub fn enumeration_times_with_lll(start: usize,top: usize) {
+    let mut cvp_times_pre_lll = Vec::with_capacity(top-start);
+    let mut cvp_times_post_lll = Vec::with_capacity(top-start);
+    let mut svp_times_pre_lll = Vec::with_capacity(top-start);
+    let mut svp_times_post_lll = Vec::with_capacity(top-start);
+    let mut basis = generate_random_basis(start);
+    let mut max_y = 0 as u64;
+    let max_x = top as u64;
+    let min_x = (start-1) as u64;
+    for dimension in start..top {
         let vector = generate_random_vector(dimension, 20.);
         let index = dimension - 2;
-        let loops = vec![15, 15, 15, 15, 10, 10, 10, 10, 10, 5, 5, 5, 5, 3, 3, 3, 3, 2, 2];
+        let loops = vec![15, 15, 15, 15, 10, 10, 10, 5, 5, 3, 3, 2, 2, 2];
         let mut lattice = Lattice::build_lattice_basis_from_vectors(&basis).expect("Should be a square matrix.");
 
         let mut loop_num = 1;
@@ -182,11 +187,20 @@ pub fn enumeration_times_with_lll(top: usize) {
         for _ in 0..loop_num {
             lattice.closest_vector_by_enumeration(&vector);
         }
-        let elapsed = (now.elapsed()/loop_num as u32).as_micros() as u64;
+        let elapsed = (now.elapsed()/loop_num as u32).as_millis() as u64;
         if elapsed > max_y {
             max_y = elapsed;
         }
-        times_pre_lll.push((dimension as u64, elapsed));
+        cvp_times_pre_lll.push((dimension as u64, elapsed));
+
+        for _ in 0..loop_num {
+            lattice.shortest_vector_by_enumeration();
+        }
+        let elapsed = (now.elapsed()/loop_num as u32).as_millis() as u64;
+        if elapsed > max_y {
+            max_y = elapsed;
+        }
+        svp_times_pre_lll.push((dimension as u64, elapsed));
 
 
         lattice.lll_reduction(0.75);
@@ -195,22 +209,37 @@ pub fn enumeration_times_with_lll(top: usize) {
         for _ in 0..loop_num {
             lattice.closest_vector_by_enumeration(&vector);
         }
-        let elapsed = (now.elapsed()/loop_num as u32).as_micros() as u64;
+        let elapsed = (now.elapsed()/loop_num as u32).as_millis() as u64;
         if elapsed > max_y {
             max_y = elapsed;
         }
-        times_post_lll.push((dimension as u64, elapsed));
+        cvp_times_post_lll.push((dimension as u64, elapsed));
+
+        let now = Instant::now();
+        for _ in 0..loop_num {
+            lattice.shortest_vector_by_enumeration();
+        }
+        let elapsed = (now.elapsed()/loop_num as u32).as_millis() as u64;
+        if elapsed > max_y {
+            max_y = elapsed;
+        }
+        svp_times_post_lll.push((dimension as u64, elapsed));
 
         increase_basis(&mut basis);
     }
 
-    let times = vec![(times_pre_lll, "Before LLL-reduction"), (times_post_lll, "After LLL-reduction")];
+    let times = vec![
+        (cvp_times_pre_lll, "CVP before LLL-reduction"),
+        (cvp_times_post_lll, "CVP after LLL-reduction"),
+        (svp_times_pre_lll, "SVP before LLL-reduction"),
+        (svp_times_post_lll, "SVP after LLL-reduction"),
+    ];
 
-    plot_time(times, "Timing of Closest Vector Problem based on LLL-reduction", max_y, top as u64, "cvp-lll", "Seconds");
+    plot_time(times, "Timing of Enumeration Methods", (min_x, max_x, 1, max_y), "enumeration-lll", "Milliseconds");
 }
 
 
-fn plot_time(times: Vec<(Vec<(u64, u64)>, &str)>, caption: &str, max_y: u64, max_x: u64, filename: &str, y_label: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot_time(times: Vec<(Vec<(u64, u64)>, &str)>, caption: &str, range: (u64, u64, u64, u64), filename: &str, y_label: &str) -> Result<(), Box<dyn std::error::Error>> {
     let file: String = "images/".to_string() + filename + ".svg";
 
     let root = SVGBackend::new(&file, (1200, 800)).into_drawing_area();
@@ -224,14 +253,14 @@ fn plot_time(times: Vec<(Vec<(u64, u64)>, &str)>, caption: &str, max_y: u64, max
     ];
 
     // let y = (1..max_y).log_scale();
-    let y = 1..max_y;
-    let x = 1..max_x;
+    let x = range.0..range.1;
+    let y = range.2..range.3;
 
     let mut chart = ChartBuilder::on(&root)
         .caption(caption.to_string(), ("computer-modern", 50).into_font())
         .margin(40)
         .x_label_area_size(50)
-        .y_label_area_size(70)
+        .y_label_area_size(80)
         .build_cartesian_2d(x, y)?;
         // .build_cartesian_2d(1..top, (min_y..max_y).log_scale())?;
 
@@ -239,7 +268,7 @@ fn plot_time(times: Vec<(Vec<(u64, u64)>, &str)>, caption: &str, max_y: u64, max
         .x_desc("Dimension of lattice")
         .x_label_style(("computer-modern", 24).into_font())
         .y_desc(y_label)
-        .y_label_formatter(&|y| format!("{}", y/1000000 as u64))
+        .y_label_formatter(&|y| format!("{0:.1$e}", y, 1))
         .y_label_style(("computer-modern", 24).into_font())
         .draw()?;
 
