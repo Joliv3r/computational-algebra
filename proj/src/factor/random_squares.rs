@@ -28,7 +28,6 @@ fn find_relations(n: &Integer, m: u64) -> HashMap<Integer, Vec<(u64, u64)>> {
 
 
 fn check_if_relations_gives_squares(relations: &HashMap<Integer, Vec<(u64, u64)>>) -> bool {
-    for 
     todo!()
 }
 
