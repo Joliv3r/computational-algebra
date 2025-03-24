@@ -1,6 +1,7 @@
 use rug::Integer;
 use std::sync::Arc;
 pub mod finite_field;
+pub mod z2;
 
 
 pub trait HasRepresentation {

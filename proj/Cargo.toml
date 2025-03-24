@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bit-matrix = "0.8.1"
+gauss_jordan_elimination = { version = "0.2.0", features = ["generic_calculation"] }
 itertools = "0.14.0"
 ndarray = "0.16.1"
 ndarray-linalg = { version = "0.17.0", features = ["openblas"] }
+num = "0.4.3"
 openblas-src = "0.10.11"
 plotters = "0.3.7"
 rand = "0.8.5"
