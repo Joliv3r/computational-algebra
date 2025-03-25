@@ -10,12 +10,13 @@ use num::traits::{Zero, One};
 
 // We do not care for the factorization, and therefore only return the factors that are repeated an
 // odd number of times.
-fn find_one_relation(n: &Integer, rng: &mut RandState) -> (Integer, Vec<u64>) {
+fn find_one_relation(n: &Integer, rng: &mut RandState) -> (Integer, Vec<(u64, u64)>) {
     let mut t = n.random_below_ref(rng).complete().pow_mod(&Integer::from(2), n).expect("The square should exist.");
 
     let t_factors = loop {
         if let Some(temp_factors) = trial_division(&t) {
-            break temp_factors.iter().filter(|(_, exponent)| exponent % 2 == 1).map(|(factor, _)| *factor).collect_vec()
+            // break temp_factors.iter().filter(|(_, exponent)| exponent % 2 == 1).map(|(factor, _)| *factor).collect_vec()
+            break temp_factors
         }
         t = n.random_below_ref(rng).complete();
     };
@@ -24,10 +25,10 @@ fn find_one_relation(n: &Integer, rng: &mut RandState) -> (Integer, Vec<u64>) {
 }
 
 
-pub fn find_multiple_relations(n: &Integer, m: u64) -> HashMap<Integer, Vec<u64>> {
+pub fn find_multiple_relations(n: &Integer, m: u64) -> HashMap<Integer, Vec<(u64, u64)>> {
     let mut rng = RandState::new();
     rng.seed(&Integer::from(SystemTime::now().duration_since(UNIX_EPOCH).expect("We are not time travelling").as_secs()));
-    let mut hashmap: HashMap<Integer, Vec<u64>> = HashMap::with_capacity(m as usize);
+    let mut hashmap: HashMap<Integer, Vec<(u64, u64)>> = HashMap::with_capacity(m as usize);
     for _ in 0..m {
         // NOTE: might give the same integer and factors twice, however this is unlikely when n is
         // large.
@@ -102,9 +103,9 @@ fn find_a_nonzero_solution(matrix: &Vec<Vec<Z2>>, pivots: &Vec<usize>) -> Vec<Z2
     vector
 }
 
-pub fn find_squares_by_relations(relations: &HashMap<Integer, Vec<u64>>) -> Option<Vec<&Integer>> {
+pub fn find_squares_by_relations(relations: &HashMap<Integer, Vec<(u64, u64)>>) -> Option<Vec<&Integer>> {
     let integers = relations.keys().collect_vec();
-    let primes: Vec<u64> = relations.values().into_iter().flatten().unique().map(|n| *n as u64).collect_vec();
+    let primes: Vec<u64> = relations.values().into_iter().flatten().filter(|(_, exp)| exp % 2 == 1 ).map(|(n, _)| *n as u64).unique().collect_vec();
     let mut cols = integers.len();
     let rows = primes.len();
 
@@ -116,8 +117,9 @@ pub fn find_squares_by_relations(relations: &HashMap<Integer, Vec<u64>>) -> Opti
 
     for (i, integer) in integers.iter().enumerate() {
         for prime in relations.get(integer).expect("Key should exist.") {
-            let index = primes.iter().position(|p| p == prime).expect("Prime should be in the vector.");
-            choice_matrix[index][i] = Z2::one();
+            if let Some(index) = primes.iter().position(|&p| p == prime.0) {
+                choice_matrix[index][i] = Z2::one();
+            }
         }
     }
 
@@ -238,12 +240,12 @@ mod tests {
 
     #[test]
     fn test_find_square_from_relations() {
-        let mut relations: HashMap<Integer, Vec<u64>> = HashMap::new();
-        relations.insert(Integer::from(34), vec![2, 17]);
-        relations.insert(Integer::from(3247), vec![17, 191]);
-        relations.insert(Integer::from(142), vec![2, 71]);
-        relations.insert(Integer::from(1458), vec![2]);
-        relations.insert(Integer::from(1207), vec![17, 71]);
+        let mut relations: HashMap<Integer, Vec<(u64, u64)>> = HashMap::new();
+        relations.insert(Integer::from(34), vec![(2, 1), (17, 1)]);
+        relations.insert(Integer::from(3247), vec![(17, 1), (191, 1)]);
+        relations.insert(Integer::from(142), vec![(2, 1), (71, 1)]);
+        relations.insert(Integer::from(1458), vec![(2, 1), (3, 6)]);
+        relations.insert(Integer::from(1207), vec![(17, 1), (71, 1)]);
 
         let square = find_squares_by_relations(&relations).unwrap();
 
