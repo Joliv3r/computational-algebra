@@ -2,33 +2,36 @@ use gauss_jordan_elimination::gauss_jordan_elimination_generic;
 use itertools::Itertools;
 use ndarray::{array, Array2};
 use rug::{rand::RandState, Complete, Integer};
-use std::{collections::HashMap, fs::{self, File}, hash::Hash, io::{BufRead, BufReader}, ops::{AddAssign, Index}};
+use core::time;
+use std::{collections::HashMap, fs::{self, File}, hash::Hash, io::{BufRead, BufReader}, ops::{AddAssign, Index}, time::{SystemTime, UNIX_EPOCH}};
 use crate::algebraic_structure::z2::Z2;
+use num::traits::{Zero, One};
 
 
 // We do not care for the factorization, and therefore only return the factors that are repeated an
 // odd number of times.
-fn find_one_relation(n: &Integer) -> (Integer, Vec<u64>) {
-    let mut rng = RandState::new();
-    let mut t = n.random_below_ref(&mut rng).complete().pow_mod(&Integer::from(2), n).expect("The square should exist.");
+fn find_one_relation(n: &Integer, rng: &mut RandState) -> (Integer, Vec<u64>) {
+    let mut t = n.random_below_ref(rng).complete().pow_mod(&Integer::from(2), n).expect("The square should exist.");
 
     let t_factors = loop {
         if let Some(temp_factors) = trial_division(&t) {
             break temp_factors.iter().filter(|(_, exponent)| exponent % 2 == 1).map(|(factor, _)| *factor).collect_vec()
         }
-        t = n.random_below_ref(&mut rng).complete();
+        t = n.random_below_ref(rng).complete();
     };
 
     (t, t_factors)
 }
 
 
-fn find_multiple_relations(n: &Integer, m: u64) -> HashMap<Integer, Vec<u64>> {
+pub fn find_multiple_relations(n: &Integer, m: u64) -> HashMap<Integer, Vec<u64>> {
+    let mut rng = RandState::new();
+    rng.seed(&Integer::from(SystemTime::now().duration_since(UNIX_EPOCH).expect("We are not time travelling").as_secs()));
     let mut hashmap: HashMap<Integer, Vec<u64>> = HashMap::with_capacity(m as usize);
     for _ in 0..m {
         // NOTE: might give the same integer and factors twice, however this is unlikely when n is
         // large.
-        let (t, factors) = find_one_relation(n);
+        let (t, factors) = find_one_relation(n, &mut rng);
         hashmap.insert(t, factors);
     }
     hashmap
@@ -64,26 +67,52 @@ fn find_first_non_pivot(matrix: &Vec<Vec<Z2>>) -> Option<usize> {
 }
 
 
-fn find_a_nonzero_solution(matrix: &Vec<Vec<Z2>>) -> Option<Vec<Z2>> {
-    if let Some(non_pivot) = find_first_non_pivot(matrix) {
-        let mut vector = vec![Z2::zero(); matrix[0].len()];
-        for i in 0..non_pivot {
-            if matrix[i][non_pivot].0 {
-                vector[i] = Z2::one();
-            }
+fn find_all_non_pivots(matrix: &Vec<Vec<Z2>>) -> Vec<usize> {
+    let mut non_pivots: Vec<usize> = Vec::new();
+    let mut count = 0;
+    for (i, row) in matrix.iter().enumerate() {
+        if i+count >= row.len() {
+            break;
         }
-        vector[non_pivot] = Z2::one();
-        Some(vector)
-    } else {
-        None
+        if !row[i+count].0 {
+            non_pivots.push(i);
+            count += 1;
+        }
     }
+    non_pivots
 }
 
-fn find_squares_by_relations(relations: &HashMap<Integer, Vec<u64>>) -> Option<Vec<Integer>> {
+
+fn find_a_nonzero_solution(matrix: &Vec<Vec<Z2>>, pivots: &Vec<usize>) -> Vec<Z2> {
+    let mut vector = vec![Z2::zero(); matrix[0].len()];
+    for i in 0..*pivots.last().expect("Pivot vector is non-empty.") {
+        let mut count = false;
+        for pivot in pivots {
+            if matrix[i][*pivot].0 {
+                count ^= true;
+            }
+        }
+        if count {
+            vector[i] = Z2::one();
+        }
+    }
+    for pivot in pivots {
+        vector[*pivot] = Z2::one();
+    }
+    vector
+}
+
+pub fn find_squares_by_relations(relations: &HashMap<Integer, Vec<u64>>) -> Option<Vec<&Integer>> {
     let integers = relations.keys().collect_vec();
     let primes: Vec<u64> = relations.values().into_iter().flatten().unique().map(|n| *n as u64).collect_vec();
+    let mut cols = integers.len();
+    let rows = primes.len();
+
+    if primes.len() > integers.len() {
+        cols = primes.len();
+    }
     
-    let mut choice_matrix: Vec<Vec<Z2>> = vec![vec![Z2::zero(); integers.len()]; primes.len()];
+    let mut choice_matrix: Vec<Vec<Z2>> = vec![vec![Z2::zero(); cols]; rows];
 
     for (i, integer) in integers.iter().enumerate() {
         for prime in relations.get(integer).expect("Key should exist.") {
@@ -93,19 +122,25 @@ fn find_squares_by_relations(relations: &HashMap<Integer, Vec<u64>>) -> Option<V
     }
 
     gauss_jordan_elimination_generic(&mut choice_matrix);
-    
-    let relation_vector = Vec::new();
 
-    if let Some(choice_vector) = find_a_nonzero_solution(&choice_matrix) {
-        for (i, choice) in choice_vector.iter().enumerate() {
-            if choice.0 {
-                relation_vector.push(integers[i]);           
-            }
-        }
-        Some(relation_vector)
-    } else {
-        None
+    let non_pivots = find_all_non_pivots(&choice_matrix);
+    if non_pivots.is_empty() || non_pivots.first().expect("Vector is non-empty.") >= &integers.len() {
+        return None;
     }
+    
+    let mut relation_vector = Vec::new();
+
+    let choice_vector = find_a_nonzero_solution(&choice_matrix, &non_pivots);
+
+    for (i, choice) in choice_vector.iter().enumerate() {
+        if i >= integers.len() {
+            break;
+        }
+        if choice.0 {
+            relation_vector.push(integers[i]);           
+        }
+    }
+    Some(relation_vector)
 }
 
 
@@ -198,6 +233,35 @@ mod tests {
                 }
             }
         }
+    }
+
+
+    #[test]
+    fn test_find_square_from_relations() {
+        let mut relations: HashMap<Integer, Vec<u64>> = HashMap::new();
+        relations.insert(Integer::from(34), vec![2, 17]);
+        relations.insert(Integer::from(3247), vec![17, 191]);
+        relations.insert(Integer::from(142), vec![2, 71]);
+        relations.insert(Integer::from(1458), vec![2]);
+        relations.insert(Integer::from(1207), vec![17, 71]);
+
+        let square = find_squares_by_relations(&relations).unwrap();
+
+        let num1 = Integer::from(34);
+        let num2 = Integer::from(142);
+        let num3 = Integer::from(1207);
+        let answer: Vec<&Integer> = vec![&num1, &num2, &num3];
+
+        let answer_unordered: HashSet<_> = answer.iter().collect();
+        let square_unordered: HashSet<_> = square.iter().collect();
+
+        assert_eq!(square_unordered, answer_unordered);
+
+        relations.remove_entry(&num1);
+
+        let square = find_squares_by_relations(&relations);
+
+        assert!(square.is_none());
     }
 
     // #[test]
