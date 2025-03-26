@@ -84,7 +84,7 @@ fn generate_small_primes(n: usize) {
 
 
 fn main() {
-    generate_primes();
-    generate_non_primes();
-    generate_small_primes(100000);
+    // generate_primes();
+    // generate_non_primes();
+    generate_small_primes(10000000);
 }

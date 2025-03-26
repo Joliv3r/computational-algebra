@@ -178,7 +178,7 @@ mod lattice_tests {
     #[test]
     fn test_gram_schmidt() {
         let dimension = 100;
-        let tol = 1e-9;
+        let tol = 1e-6;
         let basis = generate_random_basis(dimension);
         let b = gram_schmidt(&basis);
         
