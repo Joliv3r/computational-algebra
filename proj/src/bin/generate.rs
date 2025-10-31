@@ -1,3 +1,4 @@
+use beralg::factor::file_handler::choose_primes;
 use rand::{thread_rng, Rng};
 use rug::integer::IsPrime;
 use rug::{Complete, Integer};
@@ -11,6 +12,7 @@ fn generate_primes() {
     println!("Opening file ./primes");
     // Rewrites file.
     let mut file = fs::OpenOptions::new()
+        .create(true)
         .write(true)
         .truncate(true)
         .open("primes")
@@ -87,4 +89,5 @@ fn main() {
     // generate_primes();
     // generate_non_primes();
     generate_small_primes(10000000);
+    choose_primes(100000);
 }
