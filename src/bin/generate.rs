@@ -20,8 +20,8 @@ fn generate_primes() {
     
     
     let mut p: Integer = Integer::ONE.clone();
-    let number_of_primes = 1000;
-    let space_of_primes = 100000;
+    let number_of_primes = 100;
+    let space_of_primes = 10000;
 
     println!("Starting prime generating...");
     for _ in 0..number_of_primes {
@@ -86,8 +86,8 @@ fn generate_small_primes(n: usize) {
 
 
 fn main() {
-    // generate_primes();
-    // generate_non_primes();
+    generate_primes();
+    generate_non_primes();
     generate_small_primes(10000000);
     choose_primes(100000);
 }
